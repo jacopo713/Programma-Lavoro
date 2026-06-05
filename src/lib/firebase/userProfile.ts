@@ -88,15 +88,46 @@ function profileHasRequiredFields(profile: UserProfile): boolean {
   );
 }
 
+export function resolveProfile(
+  remote: UserProfile | null,
+  cached: UserProfile | null,
+): UserProfile | null {
+  if (!remote && !cached) return null;
+  if (!remote) return cached;
+  if (!cached) return remote;
+
+  const remoteNeeds = profileNeedsOnboarding(remote);
+  const cachedNeeds = profileNeedsOnboarding(cached);
+
+  if (cachedNeeds !== remoteNeeds) {
+    return cachedNeeds ? remote : cached;
+  }
+
+  return remote.updatedAt >= cached.updatedAt ? remote : cached;
+}
+
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const cached = readCachedUserProfile(uid);
 
   try {
     await ensureFirestoreOnline();
     const snapshot = await getDoc(profileDocRef(uid));
-    if (!snapshot.exists()) return null;
-    const profile = normalizeProfile(snapshot.data());
-    writeCachedUserProfile(uid, profile);
+    if (!snapshot.exists()) {
+      return cached;
+    }
+    const remote = normalizeProfile(snapshot.data());
+    const profile = resolveProfile(remote, cached);
+    if (profile) {
+      writeCachedUserProfile(uid, profile);
+    }
+    const usedCacheOverStaleRemote = Boolean(
+      cached &&
+        !profileNeedsOnboarding(cached) &&
+        profileNeedsOnboarding(remote),
+    );
+    if (profile && usedCacheOverStaleRemote) {
+      void saveUserProfile(uid, profile).catch(() => {});
+    }
     return profile;
   } catch (error) {
     if (cached) return cached;
@@ -133,7 +164,12 @@ export async function skipOnboarding(
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   };
-  await saveUserProfile(uid, profile);
+  try {
+    await saveUserProfile(uid, profile);
+  } catch {
+    writeCachedUserProfile(uid, profile);
+    return profile;
+  }
   return profile;
 }
 
@@ -162,7 +198,12 @@ export async function completeOnboarding(
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
   };
-  await saveUserProfile(uid, profile);
+  try {
+    await saveUserProfile(uid, profile);
+  } catch {
+    writeCachedUserProfile(uid, profile);
+    return profile;
+  }
 
   const auth = getFirebaseAuth();
   const displayName = [profile.firstName, profile.lastName]

@@ -19,6 +19,7 @@ import {
   readCachedUserProfile,
   saveUserProfile,
   skipOnboarding,
+  writeCachedUserProfile,
   type CompleteOnboardingInput,
 } from "@/lib/firebase/userProfile";
 import type { UserProfile } from "@/lib/types";
@@ -42,15 +43,18 @@ type UserProfileContextValue = {
 const UserProfileContext = createContext<UserProfileContextValue | null>(null);
 
 export function UserProfileProvider({ children }: { children: ReactNode }) {
-  const { user, configured } = useAuth();
+  const { user, configured, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const autoOpenedRef = useRef(false);
+  const manualWizardRef = useRef(false);
+  const lastUidRef = useRef<string | null>(null);
 
   const refreshProfile = useCallback(async () => {
-    if (!user) {
+    const uid = user?.uid;
+    if (!uid) {
       setProfile(null);
       setProfileLoadError(null);
       setLoading(false);
@@ -59,14 +63,14 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     setProfileLoadError(null);
-    const cached = readCachedUserProfile(user.uid);
+    const cached = readCachedUserProfile(uid);
     if (cached) {
       setProfile(cached);
     }
 
     try {
-      const next = await getUserProfile(user.uid);
-      setProfile(next);
+      const next = await getUserProfile(uid);
+      setProfile(next ?? cached ?? null);
     } catch (error) {
       console.error("Impossibile caricare il profilo:", error);
       const message =
@@ -78,7 +82,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.uid]);
 
   useEffect(() => {
     if (!configured) {
@@ -89,33 +93,57 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
 
     if (!user) {
       setProfile(null);
-      setLoading(false);
+      if (!authLoading) {
+        setLoading(false);
+      }
       setWizardOpen(false);
       setProfileLoadError(null);
       autoOpenedRef.current = false;
+      manualWizardRef.current = false;
+      lastUidRef.current = null;
       return;
     }
 
-    autoOpenedRef.current = false;
+    const uidChanged = lastUidRef.current !== user.uid;
+    if (uidChanged) {
+      autoOpenedRef.current = false;
+      lastUidRef.current = user.uid;
+    }
+
+    setLoading(true);
+    const cached = readCachedUserProfile(user.uid);
+    if (cached) {
+      setProfile(cached);
+    }
+
     void refreshProfile();
-  }, [user, configured, refreshProfile]);
+  }, [user?.uid, configured, authLoading, refreshProfile]);
 
   const needsOnboarding = useMemo(() => {
-    if (!user || loading) return false;
-    return profileNeedsOnboarding(profile);
-  }, [user, loading, profile]);
+    if (!user || loading || authLoading) return false;
+    const cached = readCachedUserProfile(user.uid);
+    const effectiveProfile = profile ?? cached;
+    return profileNeedsOnboarding(effectiveProfile);
+  }, [user, loading, authLoading, profile]);
 
   useEffect(() => {
-    if (!needsOnboarding || autoOpenedRef.current) return;
+    if (!needsOnboarding || autoOpenedRef.current || loading || authLoading) return;
     autoOpenedRef.current = true;
     setWizardOpen(true);
-  }, [needsOnboarding]);
+  }, [needsOnboarding, loading, authLoading]);
+
+  useEffect(() => {
+    if (needsOnboarding || !wizardOpen || manualWizardRef.current) return;
+    setWizardOpen(false);
+  }, [needsOnboarding, wizardOpen]);
 
   const openWizard = useCallback(() => {
+    manualWizardRef.current = true;
     setWizardOpen(true);
   }, []);
 
   const closeWizard = useCallback(() => {
+    manualWizardRef.current = false;
     setWizardOpen(false);
   }, []);
 
@@ -127,9 +155,25 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     try {
       const next = await skipOnboarding(user.uid, profile);
       setProfile(next);
+      autoOpenedRef.current = true;
     } catch (error) {
       console.error("Impossibile registrare skip onboarding:", error);
+      const now = new Date().toISOString();
+      const fallback: UserProfile = {
+        firstName: profile?.firstName ?? "",
+        lastName: profile?.lastName ?? "",
+        primaryStationName: profile?.primaryStationName ?? "",
+        additionalStationNames: profile?.additionalStationNames ?? [],
+        onboardingCompleted: false,
+        onboardingSkippedAt: now,
+        createdAt: profile?.createdAt ?? now,
+        updatedAt: now,
+      };
+      writeCachedUserProfile(user.uid, fallback);
+      setProfile(fallback);
+      autoOpenedRef.current = true;
     } finally {
+      manualWizardRef.current = false;
       setWizardOpen(false);
     }
   }, [user, profile]);
@@ -141,6 +185,8 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       }
       const next = await completeOnboarding(user.uid, input, profile);
       setProfile(next);
+      autoOpenedRef.current = true;
+      manualWizardRef.current = false;
       setWizardOpen(false);
     },
     [user, profile],
@@ -152,6 +198,8 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     }
     const next = await skipOnboarding(user.uid, profile);
     setProfile(next);
+    autoOpenedRef.current = true;
+    manualWizardRef.current = false;
     setWizardOpen(false);
   }, [user, profile]);
 
