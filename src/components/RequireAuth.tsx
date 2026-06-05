@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { AuthModal, type AuthModalMode } from "@/components/AuthModal";
+import { APP_NAME } from "@/lib/constants";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
@@ -33,9 +34,10 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     return (
       <div className="auth-gate">
         <div className="auth-gate-brand">
-          <h1 className="auth-gate-title">Checklist manutenzione</h1>
+          <h1 className="auth-gate-title">{APP_NAME}</h1>
           <p className="auth-gate-lead">
-            Accedi per sincronizzare checklist e stazioni tra i tuoi dispositivi.
+            Accedi per salvare checklist e sedi, e sincronizzarle tra i tuoi
+            dispositivi.
           </p>
         </div>
         <AuthModal

@@ -13,6 +13,14 @@ const AUTH_ERROR_MESSAGES_IT: Record<string, string> = {
   "auth/invalid-credential": "Email o password non corretti.",
   "auth/too-many-requests": "Troppi tentativi. Riprova tra qualche minuto.",
   "auth/network-request-failed": "Errore di rete. Controlla la connessione.",
+  "auth/popup-closed-by-user": "Accesso annullato.",
+  "auth/cancelled-popup-request": "Accesso annullato. Riprova.",
+  "auth/account-exists-with-different-credential":
+    "Esiste già un account con questa email. Accedi con il metodo usato in registrazione.",
+  "auth/requires-recent-login":
+    "Per sicurezza, conferma di nuovo la tua identità e riprova.",
+  "auth/missing-email": "Inserisci l'indirizzo email.",
+  "auth/invalid-login-credentials": "Email o password non corretti.",
 };
 
 export function firebaseAuthErrorMessage(error: unknown): string {

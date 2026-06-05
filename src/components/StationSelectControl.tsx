@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, Train } from "lucide-react";
+import { Building2, Check, ChevronDown } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { Station } from "@/lib/types";
 
@@ -73,13 +73,13 @@ export function StationSelectControl({
         aria-controls={listId}
         aria-label={
           activeStation
-            ? `Stazione attiva: ${activeStation.name}. Apri elenco stazioni`
-            : "Seleziona stazione di compilazione"
+            ? `Sede attiva: ${activeStation.name}. Apri elenco sedi`
+            : "Seleziona sede di compilazione"
         }
         disabled={isDisabled}
         onClick={() => setOpen((current) => !current)}
       >
-        <Train size={14} aria-hidden />
+        <Building2 size={14} aria-hidden />
         <span className="station-select-label">Stazione</span>
         <span className="station-select-value">
           {activeStation?.name ?? "Seleziona"}
@@ -93,7 +93,7 @@ export function StationSelectControl({
 
       {open ? (
         <div className="station-select-menu">
-          <p className="station-select-menu-title">Compilazione stazioni</p>
+          <p className="station-select-menu-title">Sedi disponibili</p>
           <ul
             id={listId}
             className="station-select-list"
@@ -112,7 +112,7 @@ export function StationSelectControl({
                     onClick={() => selectStation(station.id)}
                   >
                     <span className="station-select-option-icon" aria-hidden>
-                      <Train size={14} />
+                      <Building2 size={14} />
                     </span>
                     <span className="station-select-option-label">{station.name}</span>
                     {isActive ? (

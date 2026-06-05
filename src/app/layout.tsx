@@ -9,9 +9,9 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Checklist manutenzione stazioni",
+  title: "Generatore checklist PDF",
   description:
-    "Checklist per ispezioni e manutenzione delle stazioni ferroviarie",
+    "Crea checklist personalizzabili con foto e note, ed esportale in PDF",
 };
 
 export default function RootLayout({

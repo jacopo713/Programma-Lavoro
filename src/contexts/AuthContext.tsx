@@ -16,9 +16,17 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import {
+  sendPasswordResetEmailForUser,
+  signInWithGooglePopup,
+} from "@/lib/firebase/authActions";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { firebaseAuthErrorMessage } from "@/lib/firebase/authErrors";
+import type { ReauthenticateInput } from "@/lib/firebase/authActions";
+import { deleteUserAccount as runDeleteUserAccount } from "@/lib/firebase/deleteUserAccount";
+
+export type { ReauthenticateInput };
 
 type AuthContextValue = {
   user: User | null;
@@ -28,6 +36,9 @@ type AuthContextValue = {
   clearJustRegistered: () => void;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
+  deleteAccount: (reauth: ReauthenticateInput) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -83,6 +94,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    await signInWithGooglePopup();
+  }, []);
+
+  const sendPasswordReset = useCallback(async (email: string) => {
+    await sendPasswordResetEmailForUser(email);
+  }, []);
+
+  const deleteAccount = useCallback(
+    async (reauth: ReauthenticateInput) => {
+      const auth = getFirebaseAuth();
+      const currentUser = auth?.currentUser;
+      if (!currentUser) {
+        throw new Error("Sessione scaduta. Accedi di nuovo.");
+      }
+
+      setJustRegistered(false);
+      await runDeleteUserAccount(currentUser, reauth);
+    },
+    [],
+  );
+
   const signOut = useCallback(async () => {
     const auth = getFirebaseAuth();
     if (!auth) return;
@@ -99,9 +132,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearJustRegistered,
       signIn,
       signUp,
+      signInWithGoogle,
+      sendPasswordReset,
+      deleteAccount,
       signOut,
     }),
-    [user, loading, configured, justRegistered, clearJustRegistered, signIn, signUp, signOut],
+    [
+      user,
+      loading,
+      configured,
+      justRegistered,
+      clearJustRegistered,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      sendPasswordReset,
+      deleteAccount,
+      signOut,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

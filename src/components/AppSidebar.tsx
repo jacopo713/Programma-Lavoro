@@ -197,7 +197,7 @@ export function AppSidebar() {
           onClick={handleNavLinkClick}
         >
           <Building2 size={18} aria-hidden />
-          <span>Stazioni di riferimento</span>
+          <span>Sedi</span>
         </Link>
 
         <div className="app-sidebar-group">

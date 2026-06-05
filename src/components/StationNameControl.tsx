@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Train } from "lucide-react";
+import { Building2, Pencil } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MAX_STATION_NAME_LENGTH } from "@/lib/constants";
 
@@ -48,7 +48,7 @@ export function StationNameControl({
   if (editing) {
     return (
       <div className={`${className} station-badge--editing`}>
-        <Train size={14} aria-hidden />
+        <Building2 size={14} aria-hidden />
         <input
           ref={inputRef}
           type="text"
@@ -81,7 +81,7 @@ export function StationNameControl({
       aria-label={`Stazione: ${stationName}. Clicca per modificare`}
       title="Modifica nome stazione"
     >
-      <Train size={14} aria-hidden />
+      <Building2 size={14} aria-hidden />
       <span className="station-badge-label">{stationName}</span>
       <Pencil size={12} className="station-badge-edit-icon" aria-hidden />
     </button>

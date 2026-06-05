@@ -18,11 +18,29 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Sync e account
 
-L'app richiede l'accesso con Firebase Auth. Checklist e registry stazioni sono salvati su Firestore (`users/{uid}/workspace/`) e sincronizzati tra dispositivi con strategia **ultima modifica vince** (`updatedAt`). Le foto restano su Firebase Storage.
+L'app richiede l'accesso con Firebase Auth (email/password e Google). Checklist e registry stazioni sono salvati su Firestore (`users/{uid}/workspace/`) e sincronizzati tra dispositivi con strategia **ultima modifica vince** (`updatedAt`). Le foto restano su Firebase Storage.
 
 Al primo login con dati solo in locale, i dati vengono migrati automaticamente al cloud se il workspace remoto è vuoto.
 
-Per aggiornare le regole Firestore:
+### Configurazione Firebase Console
+
+1. **Authentication → Sign-in method**
+   - Abilita **Email/Password**
+   - Abilita **Google** (nome supporto e email progetto)
+2. **Authentication → Settings → Authorized domains**
+   - Aggiungi `localhost` per lo sviluppo locale
+   - Aggiungi il dominio di produzione (es. `*.vercel.app` o dominio custom)
+3. Se Google è in modalità test, aggiungi gli utenti tester nella **OAuth consent screen** del progetto Google Cloud collegato
+
+Variabili ambiente richieste in `.env.local`: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, e le altre chiavi del progetto Firebase.
+
+Opzionale: `NEXT_PUBLIC_LEGAL_CONTACT_EMAIL` — email mostrata nell'informativa privacy per richieste GDPR.
+
+Termini d'uso e informativa privacy: `/termini` e `/privacy`.
+
+### Deploy regole Firestore
+
+Dopo modifiche a `firebase.firestore.rules`:
 
 ```bash
 npx firebase-tools deploy --only firestore:rules --project <project-id>

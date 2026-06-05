@@ -43,7 +43,7 @@ export const INSPECTION_SECTIONS: readonly InspectionSectionDef[] = [
     id: "trackAreas",
     number: "4",
     title: "Spazi tra i binari",
-    hint: "Segnala le criticità negli spazi tra i binari e in prossimità sede ferroviaria.",
+    hint: "Segnala criticità nell'area indicata e nei punti da verificare.",
   },
   {
     id: "publicServices",

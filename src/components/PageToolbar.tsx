@@ -37,14 +37,14 @@ function PageToolbarLeading() {
       <div>
         <h1 className="page-toolbar-title">{title}</h1>
         <p className="criticisms-index-subtitle">
-          Stazione: <strong>{hydrated ? stationName : "…"}</strong>
+          Sede: <strong>{hydrated ? stationName : "…"}</strong>
         </p>
       </div>
     );
   }
 
   if (pathname === "/stazioni") {
-    return <h1 className="page-toolbar-title">Stazioni di riferimento</h1>;
+    return <h1 className="page-toolbar-title">Sedi</h1>;
   }
 
   if (pathname === "/profilo") {

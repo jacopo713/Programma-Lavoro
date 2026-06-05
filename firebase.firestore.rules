@@ -36,10 +36,13 @@ service cloud.firestore {
         && (request.resource.data.onboardingSkippedAt == null
           || request.resource.data.onboardingSkippedAt is string)
         && request.resource.data.updatedAt is string;
+
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
     match /users/{userId}/workspace/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

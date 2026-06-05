@@ -19,11 +19,11 @@ import { MAX_STATION_NAME_LENGTH } from "@/lib/constants";
 const STEPS = [
   {
     title: "Chi sei",
-    lead: "Questi dati compaiono nel PDF di ispezione e identificano l'operatore.",
+    lead: "Questi dati compaiono nel PDF e identificano chi ha compilato la checklist.",
   },
   {
-    title: "Le tue stazioni",
-    lead: "Indica la stazione di riferimento e le altre che segui. Potrai modificarle da Stazioni.",
+    title: "Le tue sedi",
+    lead: "Indica la sede principale e le altre che segui. Potrai modificarle dalla sezione Sedi.",
   },
   {
     title: "Come funziona",
@@ -35,7 +35,7 @@ const GUIDE_ITEMS = [
   {
     icon: ClipboardList,
     title: "Checklist",
-    text: "Compila le 12 aree di ispezione per la stazione attiva.",
+    text: "Compila le aree di verifica per la sede attiva.",
   },
   {
     icon: TriangleAlert,
@@ -44,13 +44,13 @@ const GUIDE_ITEMS = [
   },
   {
     icon: Building2,
-    title: "Stazioni",
-    text: "Passa tra stazione di riferimento e altre stazioni assegnate.",
+    title: "Sedi",
+    text: "Passa tra sede principale e altre sedi che gestisci.",
   },
   {
     icon: FileText,
     title: "PDF",
-    text: "Esporta il report con nome operatore, riepilogo e allegati fotografici.",
+    text: "Esporta il report con nome, riepilogo e allegati fotografici.",
   },
 ] as const;
 
@@ -111,7 +111,7 @@ export function OnboardingWizard() {
 
   const validateStepTwo = () => {
     if (!primaryStationName.trim()) {
-      setError("Inserisci la stazione di riferimento.");
+      setError("Inserisci la sede principale.");
       return false;
     }
     return true;
@@ -168,7 +168,7 @@ export function OnboardingWizard() {
         additionalStationNames,
       );
       if (!seeded) {
-        showToast("Profilo salvato, ma le stazioni non sono state aggiornate", "warning");
+        showToast("Profilo salvato, ma le sedi non sono state aggiornate", "warning");
       } else {
         showToast("Profilo configurato", "success");
       }
@@ -261,7 +261,7 @@ export function OnboardingWizard() {
         {step === 1 ? (
           <div className="onboarding-wizard-fields">
             <label className="auth-field">
-              <span>Stazione di riferimento *</span>
+              <span>Sede principale *</span>
               <input
                 type="text"
                 required
@@ -274,7 +274,7 @@ export function OnboardingWizard() {
 
             <div className="onboarding-station-list">
               <div className="onboarding-station-list-head">
-                <span>Altre stazioni</span>
+                <span>Altre sedi</span>
                 <button
                   type="button"
                   className="onboarding-station-add"
@@ -288,7 +288,7 @@ export function OnboardingWizard() {
 
               {additionalStations.length === 0 ? (
                 <p className="onboarding-station-empty">
-                  Nessuna stazione aggiuntiva (opzionale).
+                  Nessuna sede aggiuntiva (opzionale).
                 </p>
               ) : (
                 additionalStations.map((name, index) => (
@@ -298,8 +298,8 @@ export function OnboardingWizard() {
                       maxLength={MAX_STATION_NAME_LENGTH}
                       value={name}
                       disabled={submitting}
-                      placeholder="Nome stazione"
-                      aria-label={`Altra stazione ${index + 1}`}
+                      placeholder="Nome sede"
+                      aria-label={`Altra sede ${index + 1}`}
                       onChange={(event) =>
                         updateAdditionalStation(index, event.target.value)
                       }
@@ -307,7 +307,7 @@ export function OnboardingWizard() {
                     <button
                       type="button"
                       className="onboarding-station-remove"
-                      aria-label="Rimuovi stazione"
+                      aria-label="Rimuovi sede"
                       disabled={submitting}
                       onClick={() => removeAdditionalStation(index)}
                     >

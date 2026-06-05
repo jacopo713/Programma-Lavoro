@@ -209,12 +209,12 @@ export function StationsPage() {
     <>
       <main className="page-main">
         <p className="stations-intro">
-          Gestisci le stazioni assegnate. Ogni stazione ha una checklist indipendente.
+          Gestisci le sedi. Ogni sede ha una checklist indipendente.
         </p>
 
         <form className="stations-add-form" onSubmit={handleAddStation}>
           <label className="stations-add-label" htmlFor="new-station-name">
-            Nuova stazione
+            Nuova sede
           </label>
           <div className="stations-add-row">
             <input
@@ -223,7 +223,7 @@ export function StationsPage() {
               className="stations-add-input"
               value={newStationName}
               maxLength={MAX_STATION_NAME_LENGTH}
-              placeholder="Es. Roma Termini"
+              placeholder="Es. Sede nord, Cantiere A"
               onChange={(event) => setNewStationName(event.target.value)}
             />
             <button

@@ -1,10 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Checklist manutenzione stazioni">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Generatore checklist PDF">
   <rect width="128" height="128" rx="28" fill="#2050b8"/>
-  <rect x="30" y="26" width="68" height="80" rx="10" fill="#fff"/>
-  <rect x="46" y="20" width="36" height="18" rx="7" fill="#fff"/>
-  <rect x="56" y="24" width="16" height="12" rx="3" fill="#c8d6f0"/>
-  <path d="M42 54h44M42 68h34M42 82h38" stroke="#2050b8" stroke-width="3.5" stroke-linecap="round"/>
-  <path d="M42 96l10 10 24-24" fill="none" stroke="#1a9e52" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M88 46l8 8-4 4-8-8 4-4z" fill="#fff" opacity="0.95"/>
-  <circle cx="90" cy="44" r="5" fill="none" stroke="#fff" stroke-width="2.5" opacity="0.95"/>
+  <path
+    d="M36 96V52l28-16 28 16v44H36z"
+    fill="#fff"
+  />
+  <path d="M64 36v16M48 52h32" stroke="#2050b8" stroke-width="4" stroke-linecap="round"/>
+  <rect x="48" y="62" width="14" height="14" rx="2" fill="#c8d6f0"/>
+  <rect x="66" y="62" width="14" height="14" rx="2" fill="#c8d6f0"/>
+  <rect x="57" y="80" width="14" height="16" rx="2" fill="#c8d6f0"/>
+  <path
+    d="M42 54h44M42 68h30"
+    stroke="#2050b8"
+    stroke-width="3"
+    stroke-linecap="round"
+    opacity="0.35"
+  />
+  <path
+    d="M78 88l8 8 18-18"
+    fill="none"
+    stroke="#1a9e52"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
 </svg>

@@ -121,8 +121,8 @@ export async function buildPdfBlob({
 
   doc.setFontSize(T.meta);
   const metaRows: [string, string][] = [
-    ["Stazione", stationName],
-    ["Operatore", operatorName || "—"],
+    ["Sede", stationName],
+    ["Compilato da", operatorName || "—"],
     ["Data rilevazione", `${dateStr} — ${timeStr}`],
   ];
 
@@ -203,7 +203,7 @@ function drawPdfHeader(
   doc.setFontSize(T.reportTitle);
   doc.setTextColor(...PDF_THEME.text);
   const titleLines = doc.splitTextToSize(
-    "Report manutenzione — Checklist",
+    "Report checklist",
     textMaxW,
   ) as string[];
   doc.text(titleLines[0] ?? "", textX, titleY);
@@ -211,7 +211,7 @@ function drawPdfHeader(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(T.reportSubtitle);
   doc.setTextColor(...PDF_THEME.textMuted);
-  doc.text("Checklist ispezione stazione", textX, titleY + 6);
+  doc.text("Checklist — report PDF", textX, titleY + 6);
 
   return y0 + logoSize + L.logoGapAfterMm;
 }
@@ -944,7 +944,7 @@ function stampFooters(doc: jsPDF, pageW: number, mL: number, mR: number) {
     doc.setFontSize(T.footer);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...PDF_THEME.textMuted);
-    doc.text(`${APP_NAME} — Documento uso interno`, mL, 287);
+    doc.text(`${APP_NAME} — Documento generato automaticamente`, mL, 287);
     const pgTxt = `Pagina ${i} / ${n}`;
     doc.text(pgTxt, pageW - mR - doc.getTextWidth(pgTxt), 287);
   }
@@ -953,7 +953,7 @@ function stampFooters(doc: jsPDF, pageW: number, mL: number, mR: number) {
 export function getPdfFilename(): string {
   const now = new Date();
   const fileDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  return `Checklist_Stazione_${fileDate}.pdf`;
+  return `Checklist_${fileDate}.pdf`;
 }
 
 export function downloadPdfBlob(blob: Blob, filename: string): boolean {

@@ -3,6 +3,7 @@
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChecklistContext } from "@/contexts/ChecklistContext";
@@ -27,6 +28,7 @@ export function ProfilePageContent() {
   const [additionalStations, setAdditionalStations] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
@@ -44,7 +46,7 @@ export function ProfilePageContent() {
       return;
     }
     if (!primaryStationName.trim()) {
-      setError("Inserisci la stazione di riferimento.");
+      setError("Inserisci la sede principale.");
       return;
     }
 
@@ -116,7 +118,7 @@ export function ProfilePageContent() {
       <div className="profile-page">
         <h1>Il mio Profilo</h1>
         <p className="profile-page-muted">
-          Accedi per gestire i dati dell&apos;operatore e le preferenze dell&apos;account.
+          Accedi per gestire il profilo e le preferenze dell&apos;account.
         </p>
         <Link href="/" className="auth-btn auth-btn--primary profile-page-login-link">
           Torna alla checklist
@@ -138,7 +140,7 @@ export function ProfilePageContent() {
         <div>
           <h1>Il mio Profilo</h1>
           <p className="profile-page-lead">
-            Gestisci i dati dell&apos;operatore e le stazioni di riferimento.
+            Gestisci nome, sedi e preferenze per i PDF.
           </p>
         </div>
         <span
@@ -154,7 +156,7 @@ export function ProfilePageContent() {
 
       {!profile?.onboardingCompleted ? (
         <div className="profile-page-banner">
-          <p>Completa il profilo per personalizzare stazioni e PDF.</p>
+          <p>Completa il profilo per personalizzare sedi e PDF.</p>
           <button
             type="button"
             className="auth-btn auth-btn--ghost"
@@ -196,7 +198,7 @@ export function ProfilePageContent() {
         </div>
 
         <label className="auth-field">
-          <span>Stazione di riferimento</span>
+          <span>Sede / luogo principale</span>
           <input
             type="text"
             maxLength={MAX_STATION_NAME_LENGTH}
@@ -208,7 +210,7 @@ export function ProfilePageContent() {
 
         <div className="onboarding-station-list">
           <div className="onboarding-station-list-head">
-            <span>Altre stazioni</span>
+            <span>Altre sedi</span>
             <button
               type="button"
               className="onboarding-station-add"
@@ -222,7 +224,7 @@ export function ProfilePageContent() {
 
           {additionalStations.length === 0 ? (
             <p className="onboarding-station-empty">
-              Nessuna stazione aggiuntiva.
+              Nessuna sede aggiuntiva.
             </p>
           ) : (
             additionalStations.map((name, index) => (
@@ -232,8 +234,8 @@ export function ProfilePageContent() {
                   maxLength={MAX_STATION_NAME_LENGTH}
                   value={name}
                   disabled={saving}
-                  placeholder="Nome stazione"
-                  aria-label={`Altra stazione ${index + 1}`}
+                  placeholder="Nome sede"
+                  aria-label={`Altra sede ${index + 1}`}
                   onChange={(event) =>
                     updateAdditionalStation(index, event.target.value)
                   }
@@ -241,7 +243,7 @@ export function ProfilePageContent() {
                 <button
                   type="button"
                   className="onboarding-station-remove"
-                  aria-label="Rimuovi stazione"
+                  aria-label="Rimuovi sede"
                   disabled={saving}
                   onClick={() => removeAdditionalStation(index)}
                 >
@@ -272,7 +274,31 @@ export function ProfilePageContent() {
             <span>Salva profilo</span>
           </button>
         </div>
+
+        <p className="profile-delete-account">
+          <button
+            type="button"
+            className="auth-link-btn"
+            disabled={saving}
+            onClick={() => {
+              const confirmed = window.confirm(
+                "Vuoi eliminare il tuo account?\n\nVerranno rimossi profilo, checklist nel cloud e foto associate. L'operazione non si può annullare.",
+              );
+              if (confirmed) setDeleteDialogOpen(true);
+            }}
+          >
+            Elimina account
+          </button>
+        </p>
       </form>
+
+      <DeleteAccountDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onDeleted={() => {
+          showToast("Account eliminato", "success");
+        }}
+      />
 
       <Footer />
     </div>
