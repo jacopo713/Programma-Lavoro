@@ -171,6 +171,45 @@ body {
   outline-offset: 2px;
 }
 
+.auth-gate {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: var(--bg);
+}
+
+.auth-gate-brand {
+  text-align: center;
+  max-width: 26rem;
+}
+
+.auth-gate-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 0.35rem;
+}
+
+.auth-gate-lead {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.auth-gate-message {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.auth-gate-spinner {
+  color: var(--brand);
+}
+
 .auth-modal {
   border: none;
   padding: 0;
@@ -181,6 +220,10 @@ body {
 
 .auth-modal::backdrop {
   background: rgba(26, 26, 26, 0.45);
+}
+
+.auth-modal--mandatory::backdrop {
+  background: transparent;
 }
 
 .auth-modal-panel {
@@ -642,6 +685,21 @@ body {
 
 .checklist-toolbar-station .station-select-trigger {
   width: 100%;
+}
+
+.checklist-sync-status {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 0;
+  text-align: right;
+}
+
+.checklist-sync-status--syncing {
+  color: var(--brand);
+}
+
+.checklist-sync-status--error {
+  color: var(--danger);
 }
 
 .checklist-stats {

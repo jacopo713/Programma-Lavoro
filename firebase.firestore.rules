@@ -37,5 +37,9 @@ service cloud.firestore {
           || request.resource.data.onboardingSkippedAt is string)
         && request.resource.data.updatedAt is string;
     }
+
+    match /users/{userId}/workspace/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }

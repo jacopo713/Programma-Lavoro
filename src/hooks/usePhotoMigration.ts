@@ -8,12 +8,12 @@ import { migrateLocalPhotos } from "@/lib/firebase/migrateLocalPhotos";
 
 export function usePhotoMigration() {
   const { user, loading } = useAuth();
-  const { hydrated, reloadActiveChecklist } = useChecklistContext();
+  const { hydrated, cloudSynced, reloadActiveChecklist } = useChecklistContext();
   const { showToast } = useAppToast();
   const migratedForUid = useRef<string | null>(null);
 
   useEffect(() => {
-    if (loading || !hydrated || !user) return;
+    if (loading || !hydrated || !cloudSynced || !user) return;
     if (migratedForUid.current === user.uid) return;
 
     void migrateLocalPhotos(user.uid).then(({ migrated, failed }) => {
@@ -41,7 +41,7 @@ export function usePhotoMigration() {
         migratedForUid.current = user.uid;
       }
     });
-  }, [user, loading, hydrated, reloadActiveChecklist, showToast]);
+  }, [user, loading, hydrated, cloudSynced, reloadActiveChecklist, showToast]);
 }
 
 function PhotoMigrationRunner() {

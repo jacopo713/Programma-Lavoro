@@ -21,6 +21,7 @@ export function ChecklistToolbarActions() {
     stations,
     activeStationId,
     hydrated,
+    syncStatus,
     switchStation,
     inspectedSectionCount,
     inspectionSectionTotal,
@@ -101,6 +102,15 @@ export function ChecklistToolbarActions() {
     return ok;
   };
 
+  const syncLabel =
+    syncStatus === "loading"
+      ? "Caricamento dati…"
+      : syncStatus === "syncing"
+        ? "Salvataggio…"
+        : syncStatus === "error"
+          ? "Errore sincronizzazione"
+          : "Sincronizzato";
+
   if (!hydrated) return null;
 
   return (
@@ -127,6 +137,12 @@ export function ChecklistToolbarActions() {
           />
         </div>
         <ChecklistOverview />
+        <p
+          className={`checklist-sync-status checklist-sync-status--${syncStatus}`}
+          aria-live="polite"
+        >
+          {syncLabel}
+        </p>
       </div>
       <PdfPreviewModal
         open={pdfPreviewOpen}

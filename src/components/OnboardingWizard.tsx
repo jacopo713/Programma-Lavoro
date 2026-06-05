@@ -63,6 +63,7 @@ export function OnboardingWizard() {
     profile,
     wizardOpen,
     closeWizard,
+    dismissWizard,
     completeOnboardingFlow,
     skipOnboardingFlow,
   } = useUserProfile();
@@ -97,8 +98,8 @@ export function OnboardingWizard() {
 
   const handleCloseAttempt = useCallback(() => {
     if (submitting) return;
-    closeWizard();
-  }, [closeWizard, submitting]);
+    void dismissWizard();
+  }, [dismissWizard, submitting]);
 
   const validateStepOne = () => {
     if (!firstName.trim() || !lastName.trim()) {

@@ -6,6 +6,7 @@ import {
   type DocumentData,
 } from "firebase/firestore";
 import { updateProfile } from "firebase/auth";
+import { profileCacheKey } from "@/lib/constants";
 import { getFirestoreDb, getFirebaseAuth } from "./client";
 import {
   firestoreErrorMessage,
@@ -58,13 +59,47 @@ function normalizeProfile(data: DocumentData): UserProfile {
   };
 }
 
+export function readCachedUserProfile(uid: string): UserProfile | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(profileCacheKey(uid));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as DocumentData;
+    return normalizeProfile(parsed);
+  } catch {
+    return null;
+  }
+}
+
+export function writeCachedUserProfile(uid: string, profile: UserProfile): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(profileCacheKey(uid), JSON.stringify(profile));
+  } catch {
+    /* quota */
+  }
+}
+
+function profileHasRequiredFields(profile: UserProfile): boolean {
+  return Boolean(
+    profile.firstName.trim() &&
+      profile.lastName.trim() &&
+      profile.primaryStationName.trim(),
+  );
+}
+
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  const cached = readCachedUserProfile(uid);
+
   try {
     await ensureFirestoreOnline();
     const snapshot = await getDoc(profileDocRef(uid));
     if (!snapshot.exists()) return null;
-    return normalizeProfile(snapshot.data());
+    const profile = normalizeProfile(snapshot.data());
+    writeCachedUserProfile(uid, profile);
+    return profile;
   } catch (error) {
+    if (cached) return cached;
     if (isFirestoreOfflineError(error)) return null;
     throw new Error(firestoreErrorMessage(error));
   }
@@ -77,6 +112,7 @@ export async function saveUserProfile(
   try {
     await ensureFirestoreOnline();
     await setDoc(profileDocRef(uid), profile, { merge: true });
+    writeCachedUserProfile(uid, profile);
   } catch (error) {
     throw new Error(firestoreErrorMessage(error));
   }
@@ -154,7 +190,8 @@ export function formatOperatorDisplayName(profile: UserProfile | null): string {
 
 export function profileNeedsOnboarding(profile: UserProfile | null): boolean {
   if (!profile) return true;
-  return (
-    profile.onboardingCompleted === false && profile.onboardingSkippedAt === null
-  );
+  if (profile.onboardingCompleted) return false;
+  if (profile.onboardingSkippedAt) return false;
+  if (profileHasRequiredFields(profile)) return false;
+  return true;
 }

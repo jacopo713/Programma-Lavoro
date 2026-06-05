@@ -16,6 +16,7 @@ import {
   formatOperatorDisplayName,
   getUserProfile,
   profileNeedsOnboarding,
+  readCachedUserProfile,
   saveUserProfile,
   skipOnboarding,
   type CompleteOnboardingInput,
@@ -25,11 +26,13 @@ import type { UserProfile } from "@/lib/types";
 type UserProfileContextValue = {
   profile: UserProfile | null;
   loading: boolean;
+  profileLoadError: string | null;
   needsOnboarding: boolean;
   wizardOpen: boolean;
   operatorDisplayName: string;
   openWizard: () => void;
   closeWizard: () => void;
+  dismissWizard: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   completeOnboardingFlow: (input: CompleteOnboardingInput) => Promise<void>;
   skipOnboardingFlow: () => Promise<void>;
@@ -42,23 +45,36 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const { user, configured } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const autoOpenedRef = useRef(false);
 
   const refreshProfile = useCallback(async () => {
     if (!user) {
       setProfile(null);
+      setProfileLoadError(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setProfileLoadError(null);
+    const cached = readCachedUserProfile(user.uid);
+    if (cached) {
+      setProfile(cached);
+    }
+
     try {
       const next = await getUserProfile(user.uid);
       setProfile(next);
     } catch (error) {
       console.error("Impossibile caricare il profilo:", error);
-      setProfile(null);
+      const message =
+        error instanceof Error ? error.message : "Impossibile caricare il profilo";
+      setProfileLoadError(message);
+      if (!cached) {
+        setProfile(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -75,6 +91,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       setLoading(false);
       setWizardOpen(false);
+      setProfileLoadError(null);
       autoOpenedRef.current = false;
       return;
     }
@@ -101,6 +118,21 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const closeWizard = useCallback(() => {
     setWizardOpen(false);
   }, []);
+
+  const dismissWizard = useCallback(async () => {
+    if (!user) {
+      setWizardOpen(false);
+      return;
+    }
+    try {
+      const next = await skipOnboarding(user.uid, profile);
+      setProfile(next);
+    } catch (error) {
+      console.error("Impossibile registrare skip onboarding:", error);
+    } finally {
+      setWizardOpen(false);
+    }
+  }, [user, profile]);
 
   const completeOnboardingFlow = useCallback(
     async (input: CompleteOnboardingInput) => {
@@ -181,11 +213,13 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     () => ({
       profile,
       loading,
+      profileLoadError,
       needsOnboarding,
       wizardOpen,
       operatorDisplayName,
       openWizard,
       closeWizard,
+      dismissWizard,
       refreshProfile,
       completeOnboardingFlow,
       skipOnboardingFlow,
@@ -194,11 +228,13 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     [
       profile,
       loading,
+      profileLoadError,
       needsOnboarding,
       wizardOpen,
       operatorDisplayName,
       openWizard,
       closeWizard,
+      dismissWizard,
       refreshProfile,
       completeOnboardingFlow,
       skipOnboardingFlow,

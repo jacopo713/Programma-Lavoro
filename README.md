@@ -16,6 +16,18 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Sync e account
+
+L'app richiede l'accesso con Firebase Auth. Checklist e registry stazioni sono salvati su Firestore (`users/{uid}/workspace/`) e sincronizzati tra dispositivi con strategia **ultima modifica vince** (`updatedAt`). Le foto restano su Firebase Storage.
+
+Al primo login con dati solo in locale, i dati vengono migrati automaticamente al cloud se il workspace remoto è vuoto.
+
+Per aggiornare le regole Firestore:
+
+```bash
+npx firebase-tools deploy --only firestore:rules --project <project-id>
+```
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

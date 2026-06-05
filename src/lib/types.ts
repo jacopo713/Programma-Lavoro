@@ -48,6 +48,19 @@ export interface PendingPhoto {
   file?: File;
 }
 
+export type SyncStatus = "idle" | "loading" | "syncing" | "saved" | "error";
+
+export interface WorkspaceRegistryDoc {
+  version: 1;
+  activeStationId: string;
+  stations: Station[];
+  updatedAt: string;
+}
+
+export interface StationChecklistDoc extends ChecklistPersisted {
+  updatedAt: string;
+}
+
 export interface UserProfile {
   firstName: string;
   lastName: string;

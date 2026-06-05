@@ -11,9 +11,17 @@ interface AuthModalProps {
   mode: AuthModalMode;
   onClose: () => void;
   onModeChange: (mode: AuthModalMode) => void;
+  /** Schermata login obbligatoria: niente chiusura con X o Esc */
+  mandatory?: boolean;
 }
 
-export function AuthModal({ open, mode, onClose, onModeChange }: AuthModalProps) {
+export function AuthModal({
+  open,
+  mode,
+  onClose,
+  onModeChange,
+  mandatory = false,
+}: AuthModalProps) {
   const titleId = useId();
   const { signIn, signUp } = useAuth();
   const [email, setEmail] = useState("");
@@ -42,9 +50,9 @@ export function AuthModal({ open, mode, onClose, onModeChange }: AuthModalProps)
   }, [open, mode]);
 
   const handleClose = useCallback(() => {
-    if (submitting) return;
+    if (mandatory || submitting) return;
     onClose();
-  }, [onClose, submitting]);
+  }, [mandatory, onClose, submitting]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,11 +83,11 @@ export function AuthModal({ open, mode, onClose, onModeChange }: AuthModalProps)
   return (
     <dialog
       ref={dialogRef}
-      className="auth-modal"
+      className={`auth-modal${mandatory ? " auth-modal--mandatory" : ""}`}
       aria-labelledby={titleId}
       onCancel={(e) => {
         e.preventDefault();
-        handleClose();
+        if (!mandatory) handleClose();
       }}
       onClose={handleClose}
     >
@@ -88,15 +96,17 @@ export function AuthModal({ open, mode, onClose, onModeChange }: AuthModalProps)
           <h2 id={titleId} className="auth-modal-title">
             {isLogin ? "Accedi" : "Crea account"}
           </h2>
-          <button
-            type="button"
-            className="auth-modal-close"
-            aria-label="Chiudi"
-            disabled={submitting}
-            onClick={handleClose}
-          >
-            <X size={18} aria-hidden />
-          </button>
+          {!mandatory ? (
+            <button
+              type="button"
+              className="auth-modal-close"
+              aria-label="Chiudi"
+              disabled={submitting}
+              onClick={handleClose}
+            >
+              <X size={18} aria-hidden />
+            </button>
+          ) : null}
         </div>
 
         <p className="auth-modal-lead">

@@ -5,6 +5,21 @@ export const STORAGE_KEY = "rfi-checklist-v3";
 export const STORAGE_KEY_V2 = "rfi-checklist-v2";
 export const STORAGE_KEY_V1 = "rfi-checklist-v1";
 export const STATIONS_STORAGE_KEY = "rfi-stations-v1";
+export const PROFILE_CACHE_KEY_PREFIX = "rfi-profile-cache";
+export const WORKSPACE_REGISTRY_CACHE_PREFIX = "rfi-workspace-registry-cache";
+export const WORKSPACE_STATION_CACHE_PREFIX = "rfi-workspace-station-cache";
+
+export function profileCacheKey(uid: string): string {
+  return `${PROFILE_CACHE_KEY_PREFIX}:${uid}`;
+}
+
+export function workspaceRegistryCacheKey(uid: string): string {
+  return `${WORKSPACE_REGISTRY_CACHE_PREFIX}:${uid}`;
+}
+
+export function workspaceStationCacheKey(uid: string, stationId: string): string {
+  return `${WORKSPACE_STATION_CACHE_PREFIX}:${uid}:${stationId}`;
+}
 
 export function checklistStorageKey(stationId: string): string {
   return `${STORAGE_KEY}:${stationId}`;

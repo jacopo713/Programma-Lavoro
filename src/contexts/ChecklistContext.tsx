@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useChecklist } from "@/hooks/useChecklist";
 
 type ChecklistContextValue = ReturnType<typeof useChecklist>;
@@ -14,7 +15,9 @@ export function ChecklistProvider({
   children: ReactNode;
   onStorageError?: () => void;
 }) {
-  const value = useChecklist(onStorageError);
+  const { user, loading: authLoading } = useAuth();
+  const authReady = !authLoading && Boolean(user);
+  const value = useChecklist(user?.uid ?? null, authReady, onStorageError);
   return (
     <ChecklistContext.Provider value={value}>{children}</ChecklistContext.Provider>
   );

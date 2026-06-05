@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { canSavePhotoEntry, isDataUrlPhoto, isRemotePhoto } from "@/lib/criticismDisplay";
 import { DEFAULT_STATION_NAME, MAX_STATION_NAME_LENGTH } from "@/lib/constants";
 import { formatDateTimeIT } from "@/lib/format";
@@ -10,6 +10,12 @@ import {
   deleteStationPhotos,
   uploadCriticismPhoto,
 } from "@/lib/firebase/criticismPhotos";
+import {
+  deleteStationFromCloud,
+  loadWorkspace,
+  saveRegistryToCloud,
+  saveStationChecklistToCloud,
+} from "@/lib/firebase/workspace";
 import type { SectionId } from "@/lib/inspectionSections";
 import {
   INSPECTION_SECTION_COUNT,
@@ -25,10 +31,8 @@ import {
   saveRegistrySafe,
 } from "@/lib/stationsStorage";
 import {
-  deleteChecklistForStation,
   getChecklistForStation,
   getDefaultChecklist,
-  initializeMultiStationState,
   loadChecklistForStation,
   saveChecklistForStationSafe,
   StorageQuotaError,
@@ -39,7 +43,10 @@ import type {
   SeverityLevel,
   Station,
   StationsRegistry,
+  SyncStatus,
 } from "@/lib/types";
+
+const CLOUD_SAVE_DEBOUNCE_MS = 700;
 
 function applyChecklistState(
   checklist: ChecklistPersisted,
@@ -85,7 +92,11 @@ async function resolvePhotoForSave(
   return photo;
 }
 
-export function useChecklist(onStorageError?: () => void) {
+export function useChecklist(
+  uid: string | null,
+  authReady: boolean,
+  onStorageError?: () => void,
+) {
   const [items, setItems] = useState<Criticism[]>([]);
   const [idCounter, setIdCounter] = useState(0);
   const [stationName, setStationName] = useState(DEFAULT_STATION_NAME);
@@ -94,22 +105,57 @@ export function useChecklist(onStorageError?: () => void) {
   const [stations, setStations] = useState<Station[]>([]);
   const [activeStationId, setActiveStationId] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [cloudSynced, setCloudSynced] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [focusSessionId, setFocusSessionId] = useState<number | null>(null);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- hydrate checklist from localStorage once */
-  useEffect(() => {
-    const { registry, checklist } = initializeMultiStationState();
-    setStations(registry.stations);
-    setActiveStationId(registry.activeStationId);
-    applyChecklistState(checklist, {
-      setItems,
-      setIdCounter,
-      setStationName,
-      setSectionDescriptions,
-    });
-    setHydrated(true);
-  }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const checklistTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
+  const registryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushRegistryToCloud = useCallback(
+    async (registry: StationsRegistry) => {
+      if (!uid) return;
+      try {
+        setSyncStatus("syncing");
+        await saveRegistryToCloud(uid, registry);
+        setSyncStatus("saved");
+      } catch {
+        setSyncStatus("error");
+      }
+    },
+    [uid],
+  );
+
+  const scheduleRegistryCloudSave = useCallback(
+    (registry: StationsRegistry) => {
+      saveRegistrySafe(registry);
+      if (!uid) return;
+      if (registryTimerRef.current) {
+        clearTimeout(registryTimerRef.current);
+      }
+      setSyncStatus("syncing");
+      registryTimerRef.current = setTimeout(() => {
+        void flushRegistryToCloud(registry);
+      }, CLOUD_SAVE_DEBOUNCE_MS);
+    },
+    [uid, flushRegistryToCloud],
+  );
+
+  const flushChecklistToCloud = useCallback(
+    async (stationId: string, data: ChecklistPersisted) => {
+      if (!uid) return;
+      try {
+        setSyncStatus("syncing");
+        await saveStationChecklistToCloud(uid, stationId, data);
+        setSyncStatus("saved");
+      } catch {
+        setSyncStatus("error");
+      }
+    },
+    [uid],
+  );
 
   const persist = useCallback(
     (stationId: string, data: ChecklistPersisted) => {
@@ -121,9 +167,76 @@ export function useChecklist(onStorageError?: () => void) {
         }
         throw err;
       }
+
+      if (!uid) return;
+
+      const existing = checklistTimersRef.current.get(stationId);
+      if (existing) clearTimeout(existing);
+      setSyncStatus("syncing");
+      checklistTimersRef.current.set(
+        stationId,
+        setTimeout(() => {
+          void flushChecklistToCloud(stationId, data);
+        }, CLOUD_SAVE_DEBOUNCE_MS),
+      );
     },
-    [onStorageError],
+    [uid, onStorageError, flushChecklistToCloud],
   );
+
+  /* eslint-disable react-hooks/set-state-in-effect -- hydrate checklist from cloud */
+  useEffect(() => {
+    if (!authReady || !uid) {
+      setHydrated(false);
+      setCloudSynced(false);
+      setSyncStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+    setHydrated(false);
+    setCloudSynced(false);
+    setSyncStatus("loading");
+
+    void loadWorkspace(uid)
+      .then((workspace) => {
+        if (cancelled) return;
+
+        saveRegistrySafe(workspace.registry);
+        for (const [stationId, checklist] of Object.entries(
+          workspace.checklistsByStationId,
+        )) {
+          saveChecklistForStationSafe(stationId, checklist);
+        }
+
+        const activeChecklist =
+          workspace.checklistsByStationId[workspace.registry.activeStationId] ??
+          getDefaultChecklist();
+
+        setStations(workspace.registry.stations);
+        setActiveStationId(workspace.registry.activeStationId);
+        applyChecklistState(activeChecklist, {
+          setItems,
+          setIdCounter,
+          setStationName,
+          setSectionDescriptions,
+        });
+        setCloudSynced(true);
+        setHydrated(true);
+        setSyncStatus("saved");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Caricamento workspace cloud:", error);
+        setSyncStatus("error");
+        setHydrated(true);
+        setCloudSynced(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, uid]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const snapshot = useCallback(
     (
@@ -164,7 +277,7 @@ export function useChecklist(onStorageError?: () => void) {
           activeStationId: nextId,
           stations,
         };
-        saveRegistrySafe(nextRegistry);
+        scheduleRegistryCloudSave(nextRegistry);
 
         const nextChecklist = getChecklistForStation(nextId, target.name);
         setActiveStationId(nextId);
@@ -188,6 +301,7 @@ export function useChecklist(onStorageError?: () => void) {
       sectionDescriptions,
       persistActive,
       snapshot,
+      scheduleRegistryCloudSave,
     ],
   );
 
@@ -204,11 +318,15 @@ export function useChecklist(onStorageError?: () => void) {
       };
 
       try {
-        saveChecklistForStationSafe(station.id, {
+        const emptyChecklist = {
           ...getDefaultChecklist(),
           stationName: station.name,
-        });
-        saveRegistrySafe(nextRegistry);
+        };
+        saveChecklistForStationSafe(station.id, emptyChecklist);
+        scheduleRegistryCloudSave(nextRegistry);
+        if (uid) {
+          void saveStationChecklistToCloud(uid, station.id, emptyChecklist);
+        }
         setStations(nextRegistry.stations);
         return station;
       } catch (err) {
@@ -218,7 +336,7 @@ export function useChecklist(onStorageError?: () => void) {
         return null;
       }
     },
-    [activeStationId, stations, onStorageError],
+    [activeStationId, stations, uid, onStorageError, scheduleRegistryCloudSave],
   );
 
   const renameStation = useCallback(
@@ -237,7 +355,7 @@ export function useChecklist(onStorageError?: () => void) {
       };
 
       try {
-        saveRegistrySafe(nextRegistry);
+        scheduleRegistryCloudSave(nextRegistry);
         setStations(nextStations);
 
         if (id === activeStationId) {
@@ -246,7 +364,7 @@ export function useChecklist(onStorageError?: () => void) {
         } else {
           const saved = loadChecklistForStation(id);
           if (saved) {
-            saveChecklistForStationSafe(id, { ...saved, stationName: nextName });
+            persist(id, { ...saved, stationName: nextName });
           }
         }
         return true;
@@ -264,8 +382,10 @@ export function useChecklist(onStorageError?: () => void) {
       idCounter,
       sectionDescriptions,
       persistActive,
+      persist,
       snapshot,
       onStorageError,
+      scheduleRegistryCloudSave,
     ],
   );
 
@@ -288,12 +408,12 @@ export function useChecklist(onStorageError?: () => void) {
     async (id: string): Promise<boolean> => {
       if (stations.length <= 1) return false;
 
-      const uid = getCurrentUserId();
-      if (uid) {
+      const uidForPhotos = getCurrentUserId();
+      if (uidForPhotos) {
         try {
-          await deleteStationPhotos(uid, id);
+          await deleteStationPhotos(uidForPhotos, id);
         } catch {
-          /* elimina comunque i dati locali */
+          /* elimina comunque i dati */
         }
       }
 
@@ -307,8 +427,10 @@ export function useChecklist(onStorageError?: () => void) {
       };
 
       try {
-        deleteChecklistForStation(id);
-        saveRegistrySafe(nextRegistry);
+        scheduleRegistryCloudSave(nextRegistry);
+        if (uid) {
+          void deleteStationFromCloud(uid, id);
+        }
         setStations(nextStations);
 
         if (id === activeStationId) {
@@ -330,7 +452,7 @@ export function useChecklist(onStorageError?: () => void) {
         return false;
       }
     },
-    [activeStationId, stations, onStorageError],
+    [activeStationId, stations, uid, onStorageError, scheduleRegistryCloudSave],
   );
 
   const getStationCriticismCount = useCallback((stationId: string): number => {
@@ -384,7 +506,7 @@ export function useChecklist(onStorageError?: () => void) {
 
           const saved =
             loadChecklistForStation(stationId) ?? getDefaultChecklist();
-          saveChecklistForStationSafe(stationId, {
+          persist(stationId, {
             ...saved,
             stationName: primary,
           });
@@ -396,7 +518,7 @@ export function useChecklist(onStorageError?: () => void) {
             nextActiveId = existingPrimary.id;
           } else {
             const station = createStationRecord(primary);
-            saveChecklistForStationSafe(station.id, {
+            persist(station.id, {
               ...getDefaultChecklist(),
               stationName: station.name,
             });
@@ -408,7 +530,7 @@ export function useChecklist(onStorageError?: () => void) {
         for (const name of extras) {
           if (!findByName(name)) {
             const station = createStationRecord(name);
-            saveChecklistForStationSafe(station.id, {
+            persist(station.id, {
               ...getDefaultChecklist(),
               stationName: station.name,
             });
@@ -416,11 +538,12 @@ export function useChecklist(onStorageError?: () => void) {
           }
         }
 
-        saveRegistrySafe({
-          version: 1,
+        const nextRegistry = {
+          version: 1 as const,
           activeStationId: nextActiveId,
           stations: nextStations,
-        });
+        };
+        scheduleRegistryCloudSave(nextRegistry);
         setStations(nextStations);
 
         if (nextActiveId !== activeStationId) {
@@ -462,7 +585,9 @@ export function useChecklist(onStorageError?: () => void) {
       stationName,
       sectionDescriptions,
       persistActive,
+      persist,
       snapshot,
+      scheduleRegistryCloudSave,
     ],
   );
 
@@ -534,15 +659,15 @@ export function useChecklist(onStorageError?: () => void) {
     ): Promise<Criticism | null> => {
       if (!canSavePhotoEntry(title, photo)) return null;
 
-      const uid = getCurrentUserId();
-      if (!uid || !activeStationId) return null;
+      const currentUid = getCurrentUserId();
+      if (!currentUid || !activeStationId) return null;
 
       const newId = idCounter + 1;
 
       let remotePhoto: string;
       try {
         remotePhoto = await resolvePhotoForSave(
-          uid,
+          currentUid,
           activeStationId,
           newId,
           photo,
@@ -578,13 +703,18 @@ export function useChecklist(onStorageError?: () => void) {
   const deleteCriticism = useCallback(
     async (id: number): Promise<boolean> => {
       const existing = items.find((item) => item.id === id);
-      const uid = getCurrentUserId();
+      const currentUid = getCurrentUserId();
 
-      if (uid && activeStationId && existing?.photos[0] && isRemotePhoto(existing.photos[0])) {
+      if (
+        currentUid &&
+        activeStationId &&
+        existing?.photos[0] &&
+        isRemotePhoto(existing.photos[0])
+      ) {
         try {
-          await deleteCriticismPhoto(uid, activeStationId, id);
+          await deleteCriticismPhoto(currentUid, activeStationId, id);
         } catch {
-          /* rimuovi comunque dal checklist locale */
+          /* rimuovi comunque dal checklist */
         }
       }
 
@@ -613,13 +743,13 @@ export function useChecklist(onStorageError?: () => void) {
       if (index === -1) return false;
 
       const existing = items[index];
-      const uid = getCurrentUserId();
-      if (!uid || !activeStationId) return false;
+      const currentUid = getCurrentUserId();
+      if (!currentUid || !activeStationId) return false;
 
       let remotePhoto: string;
       try {
         remotePhoto = await resolvePhotoForSave(
-          uid,
+          currentUid,
           activeStationId,
           id,
           photo,
@@ -679,6 +809,8 @@ export function useChecklist(onStorageError?: () => void) {
     stations,
     activeStationId,
     hydrated,
+    cloudSynced,
+    syncStatus,
     switchStation,
     addStation,
     renameStation,
