@@ -38,12 +38,12 @@ Opzionale: `NEXT_PUBLIC_LEGAL_CONTACT_EMAIL` — email mostrata nell'informativa
 
 Termini d'uso e informativa privacy: `/termini` e `/privacy`.
 
-### Deploy regole Firestore
+### Deploy regole Firestore e Storage
 
-Dopo modifiche a `firebase.firestore.rules`:
+Dopo modifiche a `firebase.firestore.rules` o `firebase.storage.rules`:
 
 ```bash
-npx firebase-tools deploy --only firestore:rules --project <project-id>
+npx firebase-tools deploy --only firestore:rules,storage --project <project-id>
 ```
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.

@@ -59,7 +59,7 @@ export async function purgeUserData(uid: string): Promise<void> {
     }
   }
 
-  await deleteAllUserStorage(uid);
+  await deleteAllUserStorage(uid, stationIds);
 
   for (const stationDoc of workspaceSnap.docs) {
     await deleteDoc(stationDoc.ref);

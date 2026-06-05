@@ -87,43 +87,52 @@ export async function deleteCriticismPhoto(
   }
 }
 
+function storageErrorCode(error: unknown): string {
+  if (error && typeof error === "object" && "code" in error) {
+    return String((error as { code: string }).code);
+  }
+  return "";
+}
+
+function isBenignStorageDeleteError(code: string): boolean {
+  return (
+    code === "storage/object-not-found" ||
+    code === "storage/unauthorized" ||
+    code === "storage/unauthenticated"
+  );
+}
+
 export async function deleteStationPhotos(
   uid: string,
   stationId: string,
 ): Promise<void> {
   try {
     const folderRef = stationPhotosPrefixRef(uid, stationId);
-    await deleteStorageTree(folderRef);
+    const listing = await listAll(folderRef);
+    await Promise.all(listing.items.map((itemRef) => deleteObject(itemRef)));
   } catch (error) {
-    const code =
-      error && typeof error === "object" && "code" in error
-        ? String((error as { code: string }).code)
-        : "";
-    if (code === "storage/object-not-found") return;
+    const code = storageErrorCode(error);
+    if (isBenignStorageDeleteError(code)) return;
     throw new Error(firebaseStorageErrorMessage(error));
   }
 }
 
-async function deleteStorageTree(folderRef: ReturnType<typeof ref>): Promise<void> {
-  const listing = await listAll(folderRef);
-  await Promise.all(listing.items.map((itemRef) => deleteObject(itemRef)));
-  await Promise.all(listing.prefixes.map((prefixRef) => deleteStorageTree(prefixRef)));
-}
+/** Elimina le foto per ogni sede nota (path consentito dalle regole Storage). */
+export async function deleteAllUserStorage(
+  uid: string,
+  stationIds: Iterable<string>,
+): Promise<void> {
+  const errors: unknown[] = [];
 
-/** Elimina tutte le foto sotto users/{uid}/ (ricorsivo). */
-export async function deleteAllUserStorage(uid: string): Promise<void> {
-  const storage = getFirebaseStorage();
-  if (!storage) return;
+  for (const stationId of stationIds) {
+    try {
+      await deleteStationPhotos(uid, stationId);
+    } catch (error) {
+      errors.push(error);
+    }
+  }
 
-  try {
-    const userRootRef = ref(storage, `users/${uid}`);
-    await deleteStorageTree(userRootRef);
-  } catch (error) {
-    const code =
-      error && typeof error === "object" && "code" in error
-        ? String((error as { code: string }).code)
-        : "";
-    if (code === "storage/object-not-found") return;
-    throw new Error(firebaseStorageErrorMessage(error));
+  if (errors.length > 0) {
+    console.warn("Alcune foto non sono state rimosse da Storage:", errors);
   }
 }

@@ -2,7 +2,7 @@ import type { FirebaseError } from "firebase/app";
 
 const STORAGE_ERROR_MESSAGES_IT: Record<string, string> = {
   "storage/unauthorized":
-    "Regole Storage non configurate. Firebase Console → Storage → Rules: pubblica le regole in firebase.storage.rules (cartella users/{uid}/...).",
+    "Permesso Storage negato. Esegui: npx firebase-tools deploy --only storage --project <project-id>",
   "storage/canceled": "Caricamento annullato.",
   "storage/unknown": "Errore sconosciuto durante il caricamento.",
   "storage/object-not-found": "File non trovato su Firebase Storage.",
