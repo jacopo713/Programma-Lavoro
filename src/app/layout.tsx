@@ -9,8 +9,9 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "sanatec — Checklist manutenzione",
-  description: "Checklist manutenzione stazione ferroviaria — sanatec Piemonte",
+  title: "Checklist manutenzione stazioni",
+  description:
+    "Checklist per ispezioni e manutenzione delle stazioni ferroviarie",
 };
 
 export default function RootLayout({

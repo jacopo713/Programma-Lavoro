@@ -1,4 +1,4 @@
-/** Blu Sanatec (logo) — RGB per jsPDF */
+/** Blu brand — RGB per jsPDF */
 export const BRAND_RGB = [32, 80, 184] as const;
 export const BRAND_RGB_DARK = [24, 62, 148] as const;
 

@@ -1,3 +1,6 @@
+export const APP_NAME = "Checklist manutenzione";
+export const APP_TAGLINE = "Ispezione stazioni";
+
 export const STORAGE_KEY = "rfi-checklist-v3";
 export const STORAGE_KEY_V2 = "rfi-checklist-v2";
 export const STORAGE_KEY_V1 = "rfi-checklist-v1";
@@ -16,7 +19,6 @@ export const DEFAULT_STATION_NAME = "Roma Termini";
 export const MAX_STATION_NAME_LENGTH = 80;
 /** @deprecated Usare DEFAULT_STATION_NAME o stationName da storage */
 export const STATION_NAME = DEFAULT_STATION_NAME;
-export const OPERATOR_NAME = "Marco Rossi";
 
 export {
   DEFAULT_SECTION_ID,

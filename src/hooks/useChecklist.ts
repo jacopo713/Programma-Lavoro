@@ -347,6 +347,125 @@ export function useChecklist(onStorageError?: () => void) {
     );
   }, []);
 
+  const seedStationsFromProfile = useCallback(
+    (primaryName: string, additionalNames: string[]): boolean => {
+      const primary = primaryName.trim().slice(0, MAX_STATION_NAME_LENGTH);
+      if (!primary || !activeStationId) return false;
+
+      const extras = additionalNames
+        .map((name) => name.trim().slice(0, MAX_STATION_NAME_LENGTH))
+        .filter(Boolean)
+        .filter(
+          (name, index, list) =>
+            list.findIndex(
+              (entry) => entry.toLowerCase() === name.toLowerCase(),
+            ) === index,
+        )
+        .filter((name) => name.toLowerCase() !== primary.toLowerCase());
+
+      try {
+        let nextStations = [...stations];
+        let nextActiveId = activeStationId;
+
+        const findByName = (name: string) =>
+          nextStations.find(
+            (station) => station.name.toLowerCase() === name.toLowerCase(),
+          );
+
+        const isDefaultOnlyEmpty =
+          nextStations.length === 1 &&
+          nextStations[0].name === DEFAULT_STATION_NAME &&
+          !stationHasContent(nextStations[0].id);
+
+        if (isDefaultOnlyEmpty) {
+          const stationId = nextStations[0].id;
+          nextStations = [{ ...nextStations[0], name: primary }];
+          nextActiveId = stationId;
+
+          const saved =
+            loadChecklistForStation(stationId) ?? getDefaultChecklist();
+          saveChecklistForStationSafe(stationId, {
+            ...saved,
+            stationName: primary,
+          });
+
+          setStationName(primary);
+        } else {
+          const existingPrimary = findByName(primary);
+          if (existingPrimary) {
+            nextActiveId = existingPrimary.id;
+          } else {
+            const station = createStationRecord(primary);
+            saveChecklistForStationSafe(station.id, {
+              ...getDefaultChecklist(),
+              stationName: station.name,
+            });
+            nextStations = [...nextStations, station];
+            nextActiveId = station.id;
+          }
+        }
+
+        for (const name of extras) {
+          if (!findByName(name)) {
+            const station = createStationRecord(name);
+            saveChecklistForStationSafe(station.id, {
+              ...getDefaultChecklist(),
+              stationName: station.name,
+            });
+            nextStations = [...nextStations, station];
+          }
+        }
+
+        saveRegistrySafe({
+          version: 1,
+          activeStationId: nextActiveId,
+          stations: nextStations,
+        });
+        setStations(nextStations);
+
+        if (nextActiveId !== activeStationId) {
+          persistActive(snapshot(items, idCounter, stationName, sectionDescriptions));
+
+          const target = nextStations.find(
+            (station) => station.id === nextActiveId,
+          );
+          if (target) {
+            const nextChecklist = getChecklistForStation(
+              nextActiveId,
+              target.name,
+            );
+            setActiveStationId(nextActiveId);
+            applyChecklistState(nextChecklist, {
+              setItems,
+              setIdCounter,
+              setStationName,
+              setSectionDescriptions,
+            });
+          }
+        }
+
+        return true;
+      } catch (err) {
+        if (err instanceof StorageQuotaError) {
+          onStorageError?.();
+        }
+        return false;
+      }
+    },
+    [
+      activeStationId,
+      stations,
+      stationHasContent,
+      onStorageError,
+      items,
+      idCounter,
+      stationName,
+      sectionDescriptions,
+      persistActive,
+      snapshot,
+    ],
+  );
+
   const setSectionDescriptionAndSave = useCallback(
     (sectionId: SectionId, text: string): boolean => {
       const nextDescriptions: SectionDescriptions = {
@@ -566,6 +685,7 @@ export function useChecklist(onStorageError?: () => void) {
     deleteStation,
     getStationCriticismCount,
     stationHasContent,
+    seedStationsFromProfile,
     setSectionDescription: setSectionDescriptionAndSave,
     reloadActiveChecklist,
     addCriticism,

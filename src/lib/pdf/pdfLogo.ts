@@ -1,31 +1,48 @@
-const LOGO_PATH = "/sanatec-logo.png";
+const LOGO_PATH = "/app-logo.svg";
 
-/** Aspect ratio originale 709×181 px */
-export const SANATEC_LOGO_ASPECT = 181 / 709;
+export const APP_LOGO_ASPECT = 1;
 
 let cachedLogoDataUrl: string | null = null;
 
-export async function getSanatecLogoDataUrl(): Promise<string> {
-  if (cachedLogoDataUrl) return cachedLogoDataUrl;
-
-  const res = await fetch(LOGO_PATH);
+async function svgToPngDataUrl(svgUrl: string, sizePx: number): Promise<string> {
+  const res = await fetch(svgUrl);
   if (!res.ok) {
-    throw new Error(`Logo non trovato: ${LOGO_PATH}`);
+    throw new Error(`Logo non trovato: ${svgUrl}`);
   }
 
-  const blob = await res.blob();
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
+  const svgText = await res.text();
+  const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+  const objectUrl = URL.createObjectURL(blob);
 
-  cachedLogoDataUrl = dataUrl;
-  return dataUrl;
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Impossibile rasterizzare il logo"));
+      image.src = objectUrl;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = sizePx;
+    canvas.height = sizePx;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Canvas non disponibile");
+    }
+    ctx.drawImage(img, 0, 0, sizePx, sizePx);
+    return canvas.toDataURL("image/png");
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+export async function getAppLogoDataUrl(): Promise<string> {
+  if (cachedLogoDataUrl) return cachedLogoDataUrl;
+  cachedLogoDataUrl = await svgToPngDataUrl(LOGO_PATH, 256);
+  return cachedLogoDataUrl;
 }
 
 /** Per test o reset cache in dev */
-export function clearSanatecLogoCache(): void {
+export function clearAppLogoCache(): void {
   cachedLogoDataUrl = null;
 }

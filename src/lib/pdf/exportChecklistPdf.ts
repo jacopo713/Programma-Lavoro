@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { isDataUrlPhoto } from "@/lib/criticismDisplay";
-import { OPERATOR_NAME } from "@/lib/constants";
+import { APP_NAME } from "@/lib/constants";
 import {
   INSPECTION_SECTIONS,
   type InspectionSectionDef,
@@ -22,10 +22,7 @@ import {
   SEVERITY_BANNER_TEXT_RGB,
 } from "@/lib/severity";
 import { formatCriticismNumber, pad } from "@/lib/format";
-import {
-  getSanatecLogoDataUrl,
-  SANATEC_LOGO_ASPECT,
-} from "@/lib/pdf/pdfLogo";
+import { getAppLogoDataUrl } from "@/lib/pdf/pdfLogo";
 import {
   PDF_LAYOUT,
   PDF_THEME,
@@ -42,6 +39,7 @@ import type { Criticism, SeverityLevel } from "@/lib/types";
 export interface ExportPdfOptions {
   items: Criticism[];
   stationName: string;
+  operatorName: string;
   sectionDescriptions: SectionDescriptions;
   inspectedSectionCount: number;
   inspectionSectionTotal: number;
@@ -87,12 +85,13 @@ const SUMMARY_PAD_MM = 5;
 export async function buildPdfBlob({
   items,
   stationName,
+  operatorName,
   sectionDescriptions,
   inspectedSectionCount,
   inspectionSectionTotal,
   totalPhotoCount,
 }: ExportPdfOptions): Promise<Blob> {
-  const logoDataUrl = await getSanatecLogoDataUrl();
+  const logoDataUrl = await getAppLogoDataUrl();
   const doc = new jsPDF("p", "mm", "a4");
   const pageW = 210;
   const mL = L.marginL;
@@ -123,7 +122,7 @@ export async function buildPdfBlob({
   doc.setFontSize(T.meta);
   const metaRows: [string, string][] = [
     ["Stazione", stationName],
-    ["Operatore", OPERATOR_NAME],
+    ["Operatore", operatorName || "—"],
     ["Data rilevazione", `${dateStr} — ${timeStr}`],
   ];
 
@@ -189,18 +188,17 @@ function drawPdfHeader(
   uW: number,
 ): number {
   const y0 = L.pageTop;
-  const logoW = L.logoWidthMm;
-  const logoH = logoW * SANATEC_LOGO_ASPECT;
-  const textX = mL + logoW + 5;
+  const logoSize = L.logoSizeMm;
+  const textX = mL + logoSize + 5;
   const textMaxW = pageW - mR - textX;
 
   try {
-    doc.addImage(logoDataUrl, "PNG", mL, y0, logoW, logoH);
+    doc.addImage(logoDataUrl, "PNG", mL, y0, logoSize, logoSize);
   } catch (err) {
     console.warn("Logo PDF non caricato:", err);
   }
 
-  const titleY = y0 + logoH * 0.42;
+  const titleY = y0 + logoSize * 0.42;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(T.reportTitle);
   doc.setTextColor(...PDF_THEME.text);
@@ -215,7 +213,7 @@ function drawPdfHeader(
   doc.setTextColor(...PDF_THEME.textMuted);
   doc.text("Checklist ispezione stazione", textX, titleY + 6);
 
-  return y0 + logoH + L.logoGapAfterMm;
+  return y0 + logoSize + L.logoGapAfterMm;
 }
 
 interface SummaryStats {
@@ -946,7 +944,7 @@ function stampFooters(doc: jsPDF, pageW: number, mL: number, mR: number) {
     doc.setFontSize(T.footer);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...PDF_THEME.textMuted);
-    doc.text("sanatec Piemonte — Documento uso interno", mL, 287);
+    doc.text(`${APP_NAME} — Documento uso interno`, mL, 287);
     const pgTxt = `Pagina ${i} / ${n}`;
     doc.text(pgTxt, pageW - mR - doc.getTextWidth(pgTxt), 287);
   }

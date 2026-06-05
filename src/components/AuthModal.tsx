@@ -102,7 +102,7 @@ export function AuthModal({ open, mode, onClose, onModeChange }: AuthModalProps)
         <p className="auth-modal-lead">
           {isLogin
             ? "Accedi per sincronizzare profilo e preferenze."
-            : "Registrati con email e password."}
+            : "Registrati con email e password. Dopo la registrazione completerai un breve profilo."}
         </p>
 
         <label className="auth-field">

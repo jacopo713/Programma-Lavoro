@@ -69,7 +69,7 @@ export const PDF_LAYOUT = {
   metaLabelColMm: 42,
   /** Righe max nell'elenco compatto «Sintesi area» prima del dettaglio */
   sectionSummaryMaxLines: 8,
-  logoWidthMm: 52,
+  logoSizeMm: 16,
   logoGapAfterMm: 5,
 } as const;
 

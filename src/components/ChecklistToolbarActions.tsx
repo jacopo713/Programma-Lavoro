@@ -3,6 +3,7 @@
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useChecklistContext } from "@/contexts/ChecklistContext";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 import { useAppToast } from "@/contexts/ToastContext";
 import { MOBILE_NAV_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { buildPdfBlob, getPdfFilename } from "@/lib/pdf/exportChecklistPdf";
@@ -26,6 +27,7 @@ export function ChecklistToolbarActions() {
     totalPhotoCount,
     hasReportContent,
   } = useChecklistContext();
+  const { operatorDisplayName } = useUserProfile();
 
   const isMobile = useMediaQuery(MOBILE_NAV_QUERY);
   const [exportLoading, setExportLoading] = useState(false);
@@ -67,6 +69,7 @@ export function ChecklistToolbarActions() {
         const blob = await buildPdfBlob({
           items: itemsForPdf,
           stationName,
+          operatorName: operatorDisplayName,
           sectionDescriptions,
           inspectedSectionCount,
           inspectionSectionTotal,

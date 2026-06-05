@@ -1,11 +1,17 @@
 import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
+import {
+  getFirestore,
+  initializeFirestore,
+  type Firestore,
+} from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 import { firebaseConfig, isFirebaseConfigured } from "./config";
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let storage: FirebaseStorage | undefined;
+let firestore: Firestore | undefined;
 
 function getFirebaseApp(): FirebaseApp | null {
   if (!isFirebaseConfigured() || typeof window === "undefined") {
@@ -39,4 +45,21 @@ export function getFirebaseStorage(): FirebaseStorage | null {
   }
 
   return storage;
+}
+
+export function getFirestoreDb(): Firestore | null {
+  const firebaseApp = getFirebaseApp();
+  if (!firebaseApp) return null;
+
+  if (!firestore) {
+    try {
+      firestore = initializeFirestore(firebaseApp, {
+        experimentalForceLongPolling: true,
+      });
+    } catch {
+      firestore = getFirestore(firebaseApp);
+    }
+  }
+
+  return firestore;
 }

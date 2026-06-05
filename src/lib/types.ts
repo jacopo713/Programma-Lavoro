@@ -48,6 +48,17 @@ export interface PendingPhoto {
   file?: File;
 }
 
+export interface UserProfile {
+  firstName: string;
+  lastName: string;
+  primaryStationName: string;
+  additionalStationNames: string[];
+  onboardingCompleted: boolean;
+  onboardingSkippedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** Formato precedente (v1) per migrazione localStorage */
 export interface ChecklistPersistedV1 {
   criticisms: Record<string, Omit<Criticism, "sectionId">[]>;

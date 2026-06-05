@@ -1,7 +1,9 @@
+import { APP_NAME } from "@/lib/constants";
+
 export function Footer() {
   return (
     <footer>
-      sanatec Piemonte — Checklist manutenzione stazioni &middot; Uso interno
+      {APP_NAME} stazioni &middot; Uso interno
     </footer>
   );
 }

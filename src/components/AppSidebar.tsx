@@ -22,6 +22,7 @@ import {
 import { ResponsiveAccountBar } from "@/components/ResponsiveAccountBar";
 import { useChecklistContext } from "@/contexts/ChecklistContext";
 import { MOBILE_NAV_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
+import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
 import {
   countCriticismNav,
   isSameCriticismFilter,
@@ -131,15 +132,20 @@ export function AppSidebar() {
       aria-label="Menu principale"
     >
       <div className="app-sidebar-brand">
-        <Link href="/" className="app-sidebar-logo-link">
+        <Link href="/" className="app-sidebar-brand-link">
           <Image
-            src="/sanatec-logo.png"
-            alt="sanatec Piemonte"
-            width={150}
-            height={40}
+            src="/app-logo.svg"
+            alt=""
+            width={36}
+            height={36}
             className="app-sidebar-logo"
             priority
+            aria-hidden
           />
+          <span className="app-sidebar-brand-text">
+            <span className="app-sidebar-brand-title">{APP_NAME}</span>
+            <span className="app-sidebar-brand-sub">{APP_TAGLINE}</span>
+          </span>
         </Link>
         <div className="app-sidebar-brand-actions">
           <button
