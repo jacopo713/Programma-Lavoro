@@ -2458,6 +2458,14 @@ main {
   box-shadow: 0 0 0 2px rgba(32, 80, 184, 0.1);
 }
 
+.section-description-example {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  font-style: italic;
+}
+
 .section-description-hint {
   margin: 0.4rem 0 0;
   font-size: 0.72rem;

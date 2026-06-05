@@ -6,12 +6,14 @@ import { MAX_SECTION_DESCRIPTION_LENGTH } from "@/lib/constants";
 interface SectionDescriptionFieldProps {
   sectionTitle: string;
   value: string;
+  exampleHint?: string;
   onSave: (value: string) => void;
 }
 
 export function SectionDescriptionField({
   sectionTitle,
   value,
+  exampleHint,
   onSave,
 }: SectionDescriptionFieldProps) {
   const [draft, setDraft] = useState(value);
@@ -41,9 +43,12 @@ export function SectionDescriptionField({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
       />
+      {exampleHint ? (
+        <p className="section-description-example">{exampleHint}</p>
+      ) : null}
       <p className="section-description-hint">
-        Compare nel PDF sotto il titolo dell&apos;area, prima del dettaglio delle
-        singole criticità. Salvataggio automatico quando esci dal campo.
+        Compare nel PDF sotto il titolo dell&apos;area. Salvataggio automatico quando
+        esci dal campo.
       </p>
     </div>
   );

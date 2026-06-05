@@ -1,12 +1,10 @@
 "use client";
 
 import {
-  Building2,
   ClipboardList,
   FileText,
   Loader2,
   Plus,
-  Trash2,
   TriangleAlert,
 } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -14,20 +12,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useChecklistContext } from "@/contexts/ChecklistContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { useAppToast } from "@/contexts/ToastContext";
-import { MAX_STATION_NAME_LENGTH } from "@/lib/constants";
+import { APP_NAME, DEFAULT_STATION_NAME } from "@/lib/constants";
 
 const STEPS = [
   {
-    title: "Chi sei",
-    lead: "Questi dati compaiono nel PDF e identificano chi ha compilato la checklist.",
+    title: "Benvenuto",
+    lead: `${APP_NAME}: compila le aree della checklist, aggiungi criticità con foto e note, poi esporta tutto in un report PDF. Puoi usare l'app per qualsiasi sede o progetto.`,
   },
   {
-    title: "Le tue sedi",
-    lead: "Indica la sede principale e le altre che segui. Potrai modificarle dalla sezione Sedi.",
+    title: "Chi sei",
+    lead: "Nome e cognome compaiono nel PDF come riferimento di chi ha compilato la checklist.",
   },
   {
     title: "Come funziona",
-    lead: "Panoramica rapida delle funzioni principali dell'app.",
+    lead: "Panoramica rapida delle funzioni principali.",
   },
 ] as const;
 
@@ -35,22 +33,17 @@ const GUIDE_ITEMS = [
   {
     icon: ClipboardList,
     title: "Checklist",
-    text: "Compila le aree di verifica per la sede attiva.",
+    text: "Compila le descrizioni per ogni area e registra le criticità con gravità e foto.",
   },
   {
     icon: TriangleAlert,
     title: "Criticità",
-    text: "Aggiungi foto, gravità e note. Le foto richiedono l'accesso per il salvataggio cloud.",
-  },
-  {
-    icon: Building2,
-    title: "Sedi",
-    text: "Passa tra sede principale e altre sedi che gestisci.",
+    text: "Ogni voce può includere titolo, note e allegati fotografici nel report.",
   },
   {
     icon: FileText,
     title: "PDF",
-    text: "Esporta il report con nome, riepilogo e allegati fotografici.",
+    text: "Esporta il documento con riepilogo, descrizioni per area ed evidenze fotografiche.",
   },
 ] as const;
 
@@ -71,8 +64,6 @@ export function OnboardingWizard() {
   const [step, setStep] = useState(0);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [primaryStationName, setPrimaryStationName] = useState("");
-  const [additionalStations, setAdditionalStations] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,8 +83,6 @@ export function OnboardingWizard() {
     setError(null);
     setFirstName(profile?.firstName ?? "");
     setLastName(profile?.lastName ?? "");
-    setPrimaryStationName(profile?.primaryStationName ?? "");
-    setAdditionalStations(profile?.additionalStationNames ?? []);
   }, [wizardOpen, profile]);
 
   const handleCloseAttempt = useCallback(() => {
@@ -109,18 +98,9 @@ export function OnboardingWizard() {
     return true;
   };
 
-  const validateStepTwo = () => {
-    if (!primaryStationName.trim()) {
-      setError("Inserisci la sede principale.");
-      return false;
-    }
-    return true;
-  };
-
   const handleNext = () => {
     setError(null);
-    if (step === 0 && !validateStepOne()) return;
-    if (step === 1 && !validateStepTwo()) return;
+    if (step === 1 && !validateStepOne()) return;
     setStep((current) => Math.min(current + 1, STEPS.length - 1));
   };
 
@@ -143,34 +123,33 @@ export function OnboardingWizard() {
   };
 
   const handleComplete = async () => {
-    if (!validateStepOne() || !validateStepTwo()) {
-      if (!validateStepOne()) setStep(0);
-      else setStep(1);
+    if (!validateStepOne()) {
+      setStep(1);
       return;
     }
 
     setSubmitting(true);
     setError(null);
     try {
-      const additionalStationNames = additionalStations
-        .map((name) => name.trim())
-        .filter(Boolean);
+      const primaryStationName =
+        profile?.primaryStationName?.trim() || DEFAULT_STATION_NAME;
+      const additionalStationNames = profile?.additionalStationNames ?? [];
 
       await completeOnboardingFlow({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        primaryStationName: primaryStationName.trim(),
+        primaryStationName,
         additionalStationNames,
       });
 
       const seeded = seedStationsFromProfile(
-        primaryStationName.trim(),
+        primaryStationName,
         additionalStationNames,
       );
       if (!seeded) {
-        showToast("Profilo salvato, ma le sedi non sono state aggiornate", "warning");
+        showToast("Profilo salvato", "success");
       } else {
-        showToast("Profilo configurato", "success");
+        showToast("Configurazione completata", "success");
       }
       closeWizard();
     } catch (err) {
@@ -178,24 +157,6 @@ export function OnboardingWizard() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const addAdditionalStation = () => {
-    setAdditionalStations((current) => [...current, ""]);
-  };
-
-  const updateAdditionalStation = (index: number, value: string) => {
-    setAdditionalStations((current) =>
-      current.map((entry, entryIndex) =>
-        entryIndex === index ? value : entry,
-      ),
-    );
-  };
-
-  const removeAdditionalStation = (index: number) => {
-    setAdditionalStations((current) =>
-      current.filter((_, entryIndex) => entryIndex !== index),
-    );
   };
 
   if (!wizardOpen) return null;
@@ -231,7 +192,7 @@ export function OnboardingWizard() {
         </h2>
         <p className="onboarding-wizard-lead">{STEPS[step].lead}</p>
 
-        {step === 0 ? (
+        {step === 1 ? (
           <div className="onboarding-wizard-fields">
             <label className="auth-field">
               <span>Nome *</span>
@@ -255,68 +216,6 @@ export function OnboardingWizard() {
                 onChange={(event) => setLastName(event.target.value)}
               />
             </label>
-          </div>
-        ) : null}
-
-        {step === 1 ? (
-          <div className="onboarding-wizard-fields">
-            <label className="auth-field">
-              <span>Sede principale *</span>
-              <input
-                type="text"
-                required
-                maxLength={MAX_STATION_NAME_LENGTH}
-                value={primaryStationName}
-                disabled={submitting}
-                onChange={(event) => setPrimaryStationName(event.target.value)}
-              />
-            </label>
-
-            <div className="onboarding-station-list">
-              <div className="onboarding-station-list-head">
-                <span>Altre sedi</span>
-                <button
-                  type="button"
-                  className="onboarding-station-add"
-                  disabled={submitting}
-                  onClick={addAdditionalStation}
-                >
-                  <Plus size={14} aria-hidden />
-                  Aggiungi
-                </button>
-              </div>
-
-              {additionalStations.length === 0 ? (
-                <p className="onboarding-station-empty">
-                  Nessuna sede aggiuntiva (opzionale).
-                </p>
-              ) : (
-                additionalStations.map((name, index) => (
-                  <div key={`extra-station-${index}`} className="onboarding-station-row">
-                    <input
-                      type="text"
-                      maxLength={MAX_STATION_NAME_LENGTH}
-                      value={name}
-                      disabled={submitting}
-                      placeholder="Nome sede"
-                      aria-label={`Altra sede ${index + 1}`}
-                      onChange={(event) =>
-                        updateAdditionalStation(index, event.target.value)
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="onboarding-station-remove"
-                      aria-label="Rimuovi sede"
-                      disabled={submitting}
-                      onClick={() => removeAdditionalStation(index)}
-                    >
-                      <Trash2 size={16} aria-hidden />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
           </div>
         ) : null}
 

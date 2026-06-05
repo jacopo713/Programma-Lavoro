@@ -129,7 +129,7 @@ export function AuthModal({
     ? "Inserisci l'email dell'account. Riceverai un link per impostare una nuova password."
     : isLogin
       ? "Accedi per sincronizzare profilo e preferenze."
-      : "Registrati con email e password. Dopo la registrazione completerai un breve profilo.";
+      : "Registrati per usare il generatore di checklist PDF. Al primo accesso vedrai una breve introduzione.";
 
   return (
     <dialog

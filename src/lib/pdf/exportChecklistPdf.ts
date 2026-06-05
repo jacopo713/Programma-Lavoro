@@ -340,27 +340,7 @@ function drawInspectionDetail(
   doc.text("DETTAGLIO ISPEZIONI ED EVIDENZE", mL, y);
   y += L.gapMd;
 
-  const sectionsWithItems = INSPECTION_SECTIONS.filter((s) => {
-    const hasItems = getSectionItems(items, s.id).length > 0;
-    const hasNarrative =
-      getSectionDescription(sectionDescriptions, s.id).length > 0;
-    return hasItems || hasNarrative;
-  });
-
-  if (sectionsWithItems.length === 0) {
-    need(8);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(T.body);
-    writeWithCriticityRedLight(
-      doc,
-      "Nessuna criticità segnalata.",
-      mL,
-      y,
-    );
-    return y + L.gapMd;
-  }
-
-  for (const section of sectionsWithItems) {
+  for (const section of INSPECTION_SECTIONS) {
     y = drawSectionChapter(
       doc,
       section,
@@ -388,6 +368,39 @@ function measureSectionNarrativeHeight(
   doc.setFontSize(T.body);
   const lines = doc.splitTextToSize(text, widthMm) as string[];
   return L.gapSm + lines.length * L.lineBody + L.gapSm;
+}
+
+function measureSectionExampleHeight(
+  doc: jsPDF,
+  text: string,
+  widthMm: number,
+): number {
+  if (!text) return 0;
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(T.sectionHint);
+  const lines = doc.splitTextToSize(text, widthMm) as string[];
+  return L.gapSm + lines.length * (L.lineBody - 0.4) + L.gapSm;
+}
+
+function drawSectionDescriptionExample(
+  doc: jsPDF,
+  text: string,
+  mL: number,
+  uW: number,
+  startY: number,
+): number {
+  if (!text) return startY;
+  let y = startY + L.gapSm;
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(T.sectionHint);
+  doc.setTextColor(...PDF_THEME.textSecondary);
+  const lines = doc.splitTextToSize(text, uW) as string[];
+  for (const line of lines) {
+    doc.text(line, mL, y);
+    y += L.lineBody - 0.4;
+  }
+  doc.setTextColor(...PDF_THEME.text);
+  return y + L.gapSm;
 }
 
 function drawSectionNarrative(
@@ -424,7 +437,6 @@ function drawSectionChapter(
 ): number {
   const sectionItems = getSectionItems(allItems, section.id);
   const narrative = getSectionDescription(sectionDescriptions, section.id);
-  if (sectionItems.length === 0 && !narrative) return startY;
 
   let y = startY;
   need(L.gapMd + 6);
@@ -447,6 +459,17 @@ function drawSectionChapter(
     doc.text(allegatiLabel, pageW - mR - doc.getTextWidth(allegatiLabel), y);
   }
   y += L.gapMd;
+
+  if (section.descriptionExample) {
+    need(measureSectionExampleHeight(doc, section.descriptionExample, uW));
+    y = drawSectionDescriptionExample(
+      doc,
+      section.descriptionExample,
+      mL,
+      uW,
+      y,
+    );
+  }
 
   if (narrative) {
     need(measureSectionNarrativeHeight(doc, narrative, uW));
