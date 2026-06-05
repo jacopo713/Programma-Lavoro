@@ -609,10 +609,8 @@ function measureFieldLabelBlock(): number {
   return L.gapMd + L.lineBody + L.gapMd;
 }
 
-/** Tolleranza paginazione: evita salto pagina se mancano pochi mm */
-const PAGE_BREAK_TOLERANCE_MM = 6;
-
 const PHOTO_ENTRY_COLS = L.photoEntryCols;
+const PHOTO_ENTRY_MIN_SIZE_MM = 32;
 const PHOTO_ENTRY_COL_GAP = L.photoEntryColGapMm;
 const PHOTO_ENTRY_ROW_GAP = L.photoEntryRowGapMm;
 const PHOTO_ENTRY_INNER_GAP = L.photoEntryInnerGapMm;
@@ -628,9 +626,12 @@ function measurePhotoEntryCellHeight(
   doc: jsPDF,
   item: Criticism,
   cellW: number,
+  photoSize: number = cellW,
 ): number {
-  const photoSize = cellW;
-  let h = photoSize + L.photoEntryTitleGapMm;
+  let h = photoSize;
+  if (photoSize > 0) {
+    h += L.photoEntryTitleGapMm;
+  }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(L.photoEntryTitleFontPt);
@@ -643,16 +644,32 @@ function measurePhotoEntryCellHeight(
   return h;
 }
 
+function measurePhotoRowHeight(
+  doc: jsPDF,
+  rowItems: Criticism[],
+  cellW: number,
+  photoSize: number,
+): number {
+  let rowH = 0;
+  for (const item of rowItems) {
+    rowH = Math.max(
+      rowH,
+      measurePhotoEntryCellHeight(doc, item, cellW, photoSize),
+    );
+  }
+  return rowH;
+}
+
 function drawPhotoEntryCell(
   doc: jsPDF,
   item: Criticism,
   x: number,
   y: number,
   cellW: number,
+  photoSize: number = cellW,
 ): number {
   const severity = normalizeSeverity(item.severity);
   const photoData = item.photos[0];
-  const photoSize = cellW;
   let cy = y;
 
   if (photoData) {
@@ -696,6 +713,38 @@ function drawPhotoEntryCell(
   return cy;
 }
 
+/** Riduce la foto per riempire lo spazio residuo prima di saltare pagina */
+function resolvePhotoRowLayout(
+  doc: jsPDF,
+  rowItems: Criticism[],
+  cellW: number,
+  y: number,
+  rowGap: number,
+): { y: number; photoSize: number; rowH: number } {
+  let photoSize = cellW;
+  let rowH = measurePhotoRowHeight(doc, rowItems, cellW, photoSize);
+  const available = PAGE_BOTTOM - y - rowGap;
+
+  if (rowH > available) {
+    const textBlock = measurePhotoRowHeight(doc, rowItems, cellW, 0);
+    const overhead = textBlock + L.photoEntryTitleGapMm;
+    const fitPhoto = Math.min(cellW, available - overhead);
+    if (fitPhoto >= PHOTO_ENTRY_MIN_SIZE_MM) {
+      photoSize = fitPhoto;
+      rowH = measurePhotoRowHeight(doc, rowItems, cellW, photoSize);
+    }
+  }
+
+  if (rowH > PAGE_BOTTOM - y - rowGap) {
+    doc.addPage();
+    y = PAGE_TOP;
+    photoSize = cellW;
+    rowH = measurePhotoRowHeight(doc, rowItems, cellW, photoSize);
+  }
+
+  return { y, photoSize, rowH };
+}
+
 /** Griglia foto: sinistra → destra, più voci per riga */
 function renderCriticismItems(
   doc: jsPDF,
@@ -712,25 +761,22 @@ function renderCriticismItems(
 
   for (let i = 0; i < items.length; i += PHOTO_ENTRY_COLS) {
     const rowItems = items.slice(i, i + PHOTO_ENTRY_COLS);
-    let rowH = 0;
-    for (const item of rowItems) {
-      rowH = Math.max(rowH, measurePhotoEntryCellHeight(doc, item, cellW));
-    }
-
     const rowGap = i === 0 ? 0 : PHOTO_ENTRY_ROW_GAP;
-    const needed = rowH + rowGap;
-    const remaining = PAGE_BOTTOM - y;
-    if (needed > remaining + PAGE_BREAK_TOLERANCE_MM) {
-      doc.addPage();
-      y = PAGE_TOP;
-    }
+    const layout = resolvePhotoRowLayout(
+      doc,
+      rowItems,
+      cellW,
+      y,
+      rowGap,
+    );
+    y = layout.y;
 
     rowItems.forEach((item, colIdx) => {
       const x = mL + colIdx * (cellW + PHOTO_ENTRY_COL_GAP);
-      drawPhotoEntryCell(doc, item, x, y, cellW);
+      drawPhotoEntryCell(doc, item, x, y, cellW, layout.photoSize);
     });
 
-    y += rowH + rowGap;
+    y += layout.rowH + rowGap;
   }
 
   return y;
