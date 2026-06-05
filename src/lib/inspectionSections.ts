@@ -18,7 +18,9 @@ export interface InspectionSectionDef {
   number: string;
   title: string;
   hint: string;
-  /** Testo guida nel PDF per compilare la descrizione dell'area */
+  /** Placeholder breve nel campo descrizione (UI) */
+  descriptionPlaceholder: string;
+  /** Elenco puntato guida nel PDF */
   descriptionExample: string;
 }
 
@@ -27,89 +29,111 @@ export const INSPECTION_SECTIONS: readonly InspectionSectionDef[] = [
     id: "building",
     number: "1",
     title: "Edificio principale",
-    hint: "Descrivi lo stato generale dell'edificio e le osservazioni trasversali.",
+    hint: "Segnala criticità sull'edificio: danni, infiltrazioni, elementi non conformi.",
+    descriptionPlaceholder:
+      "Es. Edificio: infiltrazione al primo piano lato nord; infissi usurati sul vano scala.",
     descriptionExample:
-      "Esempio: facciate e coperture, infissi e serramenti, pavimenti e pareti interne, infiltrazioni o crepe, segnaletica interna, accessibilità degli spazi.",
+      "Esempio: infiltrazioni o crepe in facciata, serramenti non a tenuta, umidità di risalita, pavimenti danneggiati, segnaletica interna assente o illeggibile.",
   },
   {
     id: "external",
     number: "2",
     title: "Aree esterne",
-    hint: "Descrivi pertinenze, percorsi e spazi all'aperto.",
+    hint: "Segnala criticità su pertinenze, percorsi e spazi all'aperto.",
+    descriptionPlaceholder:
+      "Es. Marciapiede con mattonelle sollevate vicino ingresso est; illuminazione assente sul percorso laterale.",
     descriptionExample:
-      "Esempio: viabilità e parcheggi, recinzioni e cancelli, illuminazione esterna, drenaggio, stato del verde, pulizia e ordine delle aree.",
+      "Esempio: pavimentazioni dissestate, recinzioni danneggiate, illuminazione esterna insufficiente, ristagni d'acqua, vegetazione che ostruisce i passaggi.",
   },
   {
     id: "platforms",
     number: "3",
     title: "Percorsi e piattaforme",
-    hint: "Descrivi marciapiedi, rampe, scale e zone di transito.",
+    hint: "Segnala criticità su marciapiedi, rampe, scale e zone di transito.",
+    descriptionPlaceholder:
+      "Es. Cordolo usurato in rampa principale; contrasto tattile mancante all'inizio scala.",
     descriptionExample:
-      "Esempio: pavimentazioni e cordoli, rampe e scale, contrasti tattili, illuminazione, pulizia, segnaletica orizzontale e verticale.",
+      "Esempio: pavimentazioni rotte o scivolose, cordoli sporgenti, rampe troppo ripide, scale senza corrimano, illuminazione insufficiente.",
   },
   {
     id: "trackAreas",
     number: "4",
     title: "Aree tecniche e di transito",
-    hint: "Descrivi spazi di transito e aree non accessibili al pubblico.",
+    hint: "Segnala criticità in spazi di transito e aree di servizio.",
+    descriptionPlaceholder:
+      "Es. Materiale abbandonato in area transito; segnaletica di sicurezza mancante su varco tecnico.",
     descriptionExample:
-      "Esempio: pulizia e ordine, accumulo materiali, barriere e recinzioni, segnaletica di sicurezza, condizioni dei percorsi di servizio.",
+      "Esempio: materiali abbandonati, barriere danneggiate, segnaletica assente, percorsi ostruiti, condizioni di scivolosità.",
   },
   {
     id: "publicServices",
     number: "5",
     title: "Servizi al pubblico",
-    hint: "Descrivi spazi e servizi rivolti a utenti e visitatori.",
+    hint: "Segnala criticità su spazi e servizi per utenti e visitatori.",
+    descriptionPlaceholder:
+      "Es. Servizi igienici con perdita al lavabo; segnaletica informativa illeggibile in sala attesa.",
     descriptionExample:
-      "Esempio: biglietteria o reception, sale d'attesa, servizi igienici, informazioni, percorsi per tutti, ordine e manutenzione degli arredi.",
+      "Esempio: locali non accessibili, arredi danneggiati, impianti igienici fuori servizio, cartellonistica assente o obsoleta.",
   },
   {
     id: "safety",
     number: "6",
     title: "Sicurezza e antincendio",
-    hint: "Descrivi dispositivi e misure di sicurezza.",
+    hint: "Segnala criticità su dispositivi e misure di sicurezza.",
+    descriptionPlaceholder:
+      "Es. Estintore con revisione scaduta; uscita di emergenza parzialmente ostruita.",
     descriptionExample:
-      "Esempio: estintori e idranti (presenza ed etichettatura), uscite di emergenza, cartellonistica, illuminazione di emergenza, percorsi di fuga liberi.",
+      "Esempio: estintori assenti o non revisionati, idranti non accessibili, vie di fuga ostruite, cartellonistica antincendio mancante.",
   },
   {
     id: "furniture",
     number: "7",
     title: "Arredi e complementi",
-    hint: "Descrivi arredi fissi e mobili, pensiline e complementi.",
+    hint: "Segnala criticità su arredi, pensiline e complementi.",
+    descriptionPlaceholder:
+      "Es. Pensilina con lamiera deformata; panchina con struttura instabile in area attesa.",
     descriptionExample:
-      "Esempio: panchine e pensiline, protezioni solari, stabilità delle strutture, graffiti o danneggiamenti, raccolta rifiuti nelle aree comuni.",
+      "Esempio: strutture corrode o instabili, graffiti, vetri rotti, raccolta rifiuti inadeguata, elementi vandalizzati.",
   },
   {
     id: "lifts",
     number: "8",
     title: "Ascensori e montascale",
-    hint: "Descrivi impianti di sollevamento e accessibilità verticale.",
+    hint: "Segnala criticità su impianti di sollevamento.",
+    descriptionPlaceholder:
+      "Es. Ascensore con pulsante allarme non funzionante; cabina con illuminazione guasta.",
     descriptionExample:
-      "Esempio: cabina e porte, pulsantiera e allarme, rumorosità in corsa, cartellini revisione, scale mobili se presenti.",
+      "Esempio: revisione scaduta, porte che non chiudono correttamente, pulsantiera danneggiata, rumori anomali, scale mobili ferme.",
   },
   {
     id: "water",
     number: "9",
     title: "Impianti idrici",
-    hint: "Descrivi impianti idrici e sanitari.",
+    hint: "Segnala criticità su impianti idrici e sanitari.",
+    descriptionPlaceholder:
+      "Es. Perdita sotto lavabo piano terra; macchia di umidità su parete locale tecnico.",
     descriptionExample:
-      "Esempio: perdite o gocciolamenti, rubinetteria e scarichi, antiallagamento, locale tecnico o pompe, segnalazioni di umidità.",
+      "Esempio: perdite attive, rubinetteria danneggiata, scarichi intasati, tracce di allagamento, pompe non funzionanti.",
   },
   {
     id: "electrical",
     number: "10",
     title: "Impianti elettrici",
-    hint: "Descrivi impianti elettrici e illuminazione.",
+    hint: "Segnala criticità su impianti elettrici e illuminazione.",
+    descriptionPlaceholder:
+      "Es. Tratto di corridoio senza illuminazione; cavi a vista vicino quadro elettrico.",
     descriptionExample:
-      "Esempio: quadri elettrici chiusi e accessibili, illuminazione funzionante, cablaggi a vista, prese danneggiate, messa a terra e cartellini.",
+      "Esempio: illuminazione insufficiente o guasta, quadri aperti o non accessibili, prese danneggiate, cablaggi a vista non protetti.",
   },
   {
     id: "access",
     number: "11",
     title: "Controllo accessi",
-    hint: "Descrivi ingressi, varchi e sistemi di accesso.",
+    hint: "Segnala criticità su ingressi, varchi e sistemi di accesso.",
+    descriptionPlaceholder:
+      "Es. Tornello bloccato in apertura; porta automatica che non chiude completamente.",
     descriptionExample:
-      "Esempio: porte automatiche o tornelli, orari di funzionamento, intercom, videosorveglianza se prevista, stato delle serrature e dei sensori.",
+      "Esempio: serrature difettose, sensori non funzionanti, tornelli fuori servizio, videocitofono assente o guasto.",
   },
 ] as const;
 

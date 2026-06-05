@@ -8,8 +8,9 @@ export function getLegalContactEmail(): string {
   );
 }
 
+/** Usato solo in contesti legali se necessario; non mostrato fuori da termini/privacy. */
 export const LEGAL_SHORT_NOTICE =
-  "App per creare checklist ed esportarle in PDF. Uso generico e facoltativo.";
+  "App per creare checklist ed esportarle in PDF.";
 
 export const LEGAL_AUTH_FOOTER =
   "Continuando accetti Termini e Privacy.";

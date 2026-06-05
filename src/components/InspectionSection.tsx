@@ -113,7 +113,7 @@ export function InspectionSection({
       <SectionDescriptionField
         sectionTitle={section.title}
         value={sectionDescription}
-        exampleHint={section.descriptionExample}
+        placeholder={section.descriptionPlaceholder}
         onSave={onSectionDescriptionSave}
       />
 

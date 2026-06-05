@@ -5,7 +5,7 @@ export function Footer() {
   return (
     <footer className="app-footer">
       <span>
-        {APP_NAME} &middot; Checklist e PDF, uso generico
+        {APP_NAME}
       </span>
       <LegalLinks variant="footer" />
     </footer>

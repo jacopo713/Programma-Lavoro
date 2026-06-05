@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LEGAL_AUTH_FOOTER, LEGAL_SHORT_NOTICE } from "@/lib/legal/legalCopy";
+import { LEGAL_AUTH_FOOTER } from "@/lib/legal/legalCopy";
 
 interface LegalLinksProps {
   variant?: "inline" | "footer" | "auth";
@@ -29,7 +29,6 @@ export function LegalLinks({ variant = "inline" }: LegalLinksProps) {
   if (variant === "auth") {
     return (
       <p className="auth-legal-notice">
-        <span className="auth-legal-notice-short">{LEGAL_SHORT_NOTICE}</span>{" "}
         {LEGAL_AUTH_FOOTER} {links}
       </p>
     );

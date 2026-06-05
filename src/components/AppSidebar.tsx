@@ -5,6 +5,7 @@ import {
   Building2,
   ChevronDown,
   ChevronRight,
+  ClipboardList,
   Menu,
   User,
   X,
@@ -182,6 +183,15 @@ export function AppSidebar() {
         className="app-sidebar-nav"
         aria-hidden={isMobile && !mobileNavOpen ? true : undefined}
       >
+        <Link
+          href="/"
+          className={`app-sidebar-link${onChecklistRoute ? " active" : ""}`}
+          onClick={handleNavLinkClick}
+        >
+          <ClipboardList size={18} aria-hidden />
+          <span>Checklist</span>
+        </Link>
+
         <Link
           href="/profilo"
           className={`app-sidebar-link${pathname === "/profilo" ? " active" : ""}`}
