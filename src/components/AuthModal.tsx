@@ -162,6 +162,49 @@ export function AuthModal({
 
         <p className="auth-modal-lead">{lead}</p>
 
+        {isRegister && !resetSent ? (
+          <label className="auth-legal-consent">
+            <input
+              type="checkbox"
+              checked={acceptedLegal}
+              disabled={busy}
+              onChange={(event) => setAcceptedLegal(event.target.checked)}
+            />
+            <span>
+              Ho letto e accetto i{" "}
+              <Link href="/termini" className="legal-inline-link" target="_blank">
+                Termini d&apos;uso
+              </Link>{" "}
+              e l&apos;
+              <Link href="/privacy" className="legal-inline-link" target="_blank">
+                Informativa privacy
+              </Link>
+              .
+            </span>
+          </label>
+        ) : null}
+
+        {showGoogle && !resetSent ? (
+          <>
+            <button
+              type="button"
+              className="auth-btn auth-btn--google"
+              disabled={busy}
+              onClick={() => void handleGoogleSignIn()}
+            >
+              {googleSubmitting ? (
+                <Loader2 size={16} className="animate-spin" aria-hidden />
+              ) : (
+                <GoogleMark aria-hidden />
+              )}
+              <span>Continua con Google</span>
+            </button>
+            <div className="auth-modal-divider" role="presentation">
+              <span>oppure con email</span>
+            </div>
+          </>
+        ) : null}
+
         {!isReset ? <LegalLinks variant="auth" /> : null}
 
         {resetSent ? (
@@ -229,27 +272,6 @@ export function AuthModal({
               </p>
             ) : null}
 
-            {isRegister ? (
-              <label className="auth-legal-consent">
-                <input
-                  type="checkbox"
-                  checked={acceptedLegal}
-                  disabled={busy}
-                  onChange={(event) => setAcceptedLegal(event.target.checked)}
-                />
-                <span>
-                  Ho letto e accetto i{" "}
-                  <Link href="/termini" className="legal-inline-link" target="_blank">
-                    Termini d&apos;uso
-                  </Link>{" "}
-                  e l&apos;
-                  <Link href="/privacy" className="legal-inline-link" target="_blank">
-                    Informativa privacy
-                  </Link>
-                  .
-                </span>
-              </label>
-            ) : null}
           </>
         )}
 
@@ -276,25 +298,6 @@ export function AuthModal({
                   : "Registrati"}
             </span>
           </button>
-        ) : null}
-
-        {showGoogle && !resetSent ? (
-          <>
-            <div className="auth-modal-divider" role="presentation">
-              <span>oppure</span>
-            </div>
-            <button
-              type="button"
-              className="auth-btn auth-btn--google"
-              disabled={busy}
-              onClick={() => void handleGoogleSignIn()}
-            >
-              {googleSubmitting ? (
-                <Loader2 size={16} className="animate-spin" aria-hidden />
-              ) : null}
-              <span>Continua con Google</span>
-            </button>
-          </>
         ) : null}
 
         <p className="auth-modal-switch">
@@ -325,5 +328,28 @@ export function AuthModal({
         </p>
       </form>
     </dialog>
+  );
+}
+
+function GoogleMark({ ...props }: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" {...props}>
+      <path
+        fill="#4285F4"
+        d="M22 12.24c0-.82-.07-1.42-.22-2.05H12v3.72h5.9c-.12 1.02-.77 2.55-2.2 3.58l-.02.07 3.2 2.48.02.02C20.99 18.3 22 15.45 22 12.24z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 22c2.97 0 5.46-.98 7.28-2.66l-3.47-2.69c-.93.63-2.13 1.06-3.81 1.06-2.91 0-5.38-1.97-6.26-4.62l-.07.06-3.4 2.63.05.07C3.7 19.92 7.58 22 12 22z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.74 14.09c-.23-.7-.36-1.45-.36-2.24s.13-1.54.35-2.24l-.07-.06-3.4-2.63-.05.07A10.9 10.9 0 0 0 1 12c0 1.77.43 3.45 1.18 4.94l3.56-2.85z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 2.81.7 3.46 1.32l2.53-2.47C17.43 2.89 14.97 2 12 2 7.58 2 3.7 4.08 1.18 7.06l3.56 2.85C5.62 7.35 8.09 5.38 12 5.38z"
+      />
+    </svg>
   );
 }

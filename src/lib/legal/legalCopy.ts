@@ -12,7 +12,7 @@ export const LEGAL_SHORT_NOTICE =
   "App per creare checklist ed esportarle in PDF. Uso generico e facoltativo.";
 
 export const LEGAL_AUTH_FOOTER =
-  "Accedendo o registrandoti dichiari di aver letto Termini d'uso e Informativa privacy.";
+  "Continuando accetti Termini e Privacy.";
 
 export const termsSections = [
   {
