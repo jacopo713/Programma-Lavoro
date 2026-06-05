@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { isDataUrlPhoto } from "@/lib/criticismDisplay";
 import { OPERATOR_NAME } from "@/lib/constants";
 import {
   INSPECTION_SECTIONS,
@@ -824,6 +825,34 @@ function drawPhotosRowBelow(
   return maxBottom;
 }
 
+function dataUrlImageFormat(dataUrl: string): "JPEG" | "PNG" | "WEBP" {
+  if (dataUrl.includes("image/png")) return "PNG";
+  if (dataUrl.includes("image/webp")) return "WEBP";
+  return "JPEG";
+}
+
+function drawPhotoPlaceholder(
+  doc: jsPDF,
+  px: number,
+  py: number,
+  s: number,
+) {
+  doc.setDrawColor(...PDF_THEME.border);
+  doc.setFillColor(...PDF_THEME.summaryBg);
+  doc.roundedRect(
+    px,
+    py,
+    s,
+    s,
+    PDF_THEME.photoRadiusMm,
+    PDF_THEME.photoRadiusMm,
+    "FD",
+  );
+  doc.setFontSize(T.photoCaption);
+  doc.setTextColor(...PDF_THEME.textMuted);
+  doc.text("Immagine non disponibile", px + 4, py + s / 2);
+}
+
 function drawPhotoCell(
   doc: jsPDF,
   photoData: string,
@@ -834,19 +863,21 @@ function drawPhotoCell(
   showCaption = true,
 ) {
   const s = sizeMm;
-  try {
-    doc.addImage(photoData, "JPEG", px, py, s, s);
-  } catch {
+  if (photoData && isDataUrlPhoto(photoData)) {
     try {
-      doc.addImage(photoData, "PNG", px, py, s, s);
+      doc.addImage(
+        photoData,
+        dataUrlImageFormat(photoData),
+        px,
+        py,
+        s,
+        s,
+      );
     } catch {
-      doc.setDrawColor(...PDF_THEME.border);
-      doc.setFillColor(...PDF_THEME.summaryBg);
-      doc.roundedRect(px, py, s, s, PDF_THEME.photoRadiusMm, PDF_THEME.photoRadiusMm, "FD");
-      doc.setFontSize(T.photoCaption);
-      doc.setTextColor(...PDF_THEME.textMuted);
-      doc.text("Immagine non disponibile", px + 4, py + s / 2);
+      drawPhotoPlaceholder(doc, px, py, s);
     }
+  } else {
+    drawPhotoPlaceholder(doc, px, py, s);
   }
   doc.setDrawColor(...PDF_THEME.border);
   doc.setLineWidth(0.25);

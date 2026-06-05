@@ -13,16 +13,25 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-export async function resolvePhotoAsDataUrl(src: string): Promise<string> {
-  if (isDataUrlPhoto(src)) return src;
-  if (!isRemotePhoto(src)) return src;
+function photoProxyUrl(src: string): string {
+  return `/api/photo-proxy?url=${encodeURIComponent(src)}`;
+}
 
-  const response = await fetch(src);
+async function fetchRemotePhotoAsDataUrl(src: string): Promise<string> {
+  const isFirebase = src.includes("firebasestorage.googleapis.com");
+  const fetchUrl = isFirebase ? photoProxyUrl(src) : src;
+  const response = await fetch(fetchUrl);
   if (!response.ok) {
-    throw new Error("Impossibile scaricare l'immagine");
+    throw new Error(`Impossibile scaricare l'immagine (${response.status})`);
   }
   const blob = await response.blob();
   return blobToDataUrl(blob);
+}
+
+export async function resolvePhotoAsDataUrl(src: string): Promise<string> {
+  if (isDataUrlPhoto(src)) return src;
+  if (!isRemotePhoto(src)) return src;
+  return fetchRemotePhotoAsDataUrl(src);
 }
 
 export async function resolveCriticismsForPdf(
@@ -35,9 +44,16 @@ export async function resolveCriticismsForPdf(
 
       try {
         const dataUrl = await resolvePhotoAsDataUrl(photo);
+        if (!isDataUrlPhoto(dataUrl)) {
+          throw new Error("Conversione immagine non ha prodotto un data URL");
+        }
         return { ...item, photos: [dataUrl] };
-      } catch {
-        return item;
+      } catch (error) {
+        console.warn(
+          `PDF: impossibile risolvere foto criticità ${item.id}:`,
+          error,
+        );
+        return { ...item, photos: [] };
       }
     }),
   );

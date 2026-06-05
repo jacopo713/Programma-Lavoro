@@ -94,6 +94,7 @@ export function useChecklist(onStorageError?: () => void) {
   const [stations, setStations] = useState<Station[]>([]);
   const [activeStationId, setActiveStationId] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [focusSessionId, setFocusSessionId] = useState<number | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect -- hydrate checklist from localStorage once */
   useEffect(() => {
@@ -578,6 +579,8 @@ export function useChecklist(onStorageError?: () => void) {
     inspectionSectionTotal: INSPECTION_SECTION_COUNT,
     totalPhotoCount,
     hasReportContent,
+    focusSessionId,
+    setFocusSessionId,
     resetToDefault: () => {
       const def = getDefaultChecklist();
       const active = stations.find((station) => station.id === activeStationId);

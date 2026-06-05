@@ -5,13 +5,23 @@ import {
   Building2,
   ChevronDown,
   ChevronRight,
+  Menu,
   User,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEvent,
+} from "react";
+import { ResponsiveAccountBar } from "@/components/ResponsiveAccountBar";
 import { useChecklistContext } from "@/contexts/ChecklistContext";
+import { MOBILE_NAV_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   countCriticismNav,
   isSameCriticismFilter,
@@ -46,14 +56,57 @@ const CRITICISM_SUBNAV: {
 export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const isMobile = useMediaQuery(MOBILE_NAV_QUERY);
   const { items, hydrated } = useChecklistContext();
   const activeFilter = parseCriticismNavFilter(searchParams);
   const counts = useMemo(() => countCriticismNav(items), [items]);
   const onCriticismIndexRoute = pathname === CRITICISM_INDEX_PATH;
   const onChecklistRoute = pathname === "/";
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [criticismOpen, setCriticismOpen] = useState(
     () => onCriticismIndexRoute || onChecklistRoute,
   );
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setCriticismOpen(onCriticismIndexRoute || onChecklistRoute);
+      return;
+    }
+    setCriticismOpen(onCriticismIndexRoute);
+  }, [isMobile, onCriticismIndexRoute, onChecklistRoute]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileNavOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [mobileNavOpen]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileNavOpen]);
+
+  const toggleMobileNav = useCallback(() => {
+    setMobileNavOpen((open) => !open);
+  }, []);
+
+  const closeMobileNav = useCallback(() => {
+    setMobileNavOpen(false);
+  }, []);
 
   const toggleCriticismSubnav = useCallback(() => {
     setCriticismOpen((open) => !open);
@@ -66,8 +119,17 @@ export function AppSidebar() {
     toggleCriticismSubnav();
   };
 
+  const handleNavLinkClick = () => {
+    if (isMobile) {
+      closeMobileNav();
+    }
+  };
+
   return (
-    <aside className="app-sidebar" aria-label="Menu principale">
+    <aside
+      className={`app-sidebar${mobileNavOpen ? " app-sidebar--nav-open" : ""}`}
+      aria-label="Menu principale"
+    >
       <div className="app-sidebar-brand">
         <Link href="/" className="app-sidebar-logo-link">
           <Image
@@ -79,12 +141,45 @@ export function AppSidebar() {
             priority
           />
         </Link>
+        <div className="app-sidebar-brand-actions">
+          <button
+            type="button"
+            className="app-sidebar-menu-toggle"
+            aria-expanded={mobileNavOpen}
+            aria-controls="app-sidebar-nav"
+            aria-label={mobileNavOpen ? "Chiudi menu" : "Apri menu"}
+            onClick={toggleMobileNav}
+          >
+            {mobileNavOpen ? (
+              <X size={20} aria-hidden />
+            ) : (
+              <Menu size={20} aria-hidden />
+            )}
+          </button>
+          <div className="app-sidebar-account">
+            <ResponsiveAccountBar placement="header" />
+          </div>
+        </div>
       </div>
 
-      <nav className="app-sidebar-nav">
+      {mobileNavOpen ? (
+        <button
+          type="button"
+          className="app-sidebar-backdrop"
+          aria-label="Chiudi menu"
+          onClick={closeMobileNav}
+        />
+      ) : null}
+
+      <nav
+        id="app-sidebar-nav"
+        className="app-sidebar-nav"
+        aria-hidden={isMobile && !mobileNavOpen ? true : undefined}
+      >
         <Link
           href="/profilo"
           className={`app-sidebar-link${pathname === "/profilo" ? " active" : ""}`}
+          onClick={handleNavLinkClick}
         >
           <User size={18} aria-hidden />
           <span>Il mio Profilo</span>
@@ -93,6 +188,7 @@ export function AppSidebar() {
         <Link
           href="/stazioni"
           className={`app-sidebar-link${pathname === "/stazioni" ? " active" : ""}`}
+          onClick={handleNavLinkClick}
         >
           <Building2 size={18} aria-hidden />
           <span>Stazioni di riferimento</span>
@@ -142,6 +238,7 @@ export function AppSidebar() {
                     <Link
                       href={href}
                       className={`app-sidebar-sublink${isActive ? " active" : ""}`}
+                      onClick={handleNavLinkClick}
                     >
                       <span>{label}</span>
                       <span className="app-sidebar-count">{count}</span>

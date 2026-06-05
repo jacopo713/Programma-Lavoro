@@ -39,9 +39,8 @@ export function ChecklistPage() {
     updateCriticism,
     deleteCriticism,
     setCriticismResolved,
-    inspectedSectionCount,
-    inspectionSectionTotal,
-    totalPhotoCount,
+    focusSessionId,
+    setFocusSessionId,
   } = useChecklistContext();
 
   const searchParams = useSearchParams();
@@ -49,7 +48,6 @@ export function ChecklistPage() {
     () => parseCriticismFocusId(searchParams),
     [searchParams],
   );
-  const [focusSessionId, setFocusSessionId] = useState<number | null>(null);
   const visibleItems = useMemo(
     () => getChecklistVisibleItems(items, focusSessionId),
     [items, focusSessionId],
@@ -293,15 +291,6 @@ export function ChecklistPage() {
   return (
     <>
       <main className="checklist-main">
-        <div className="checklist-overview" aria-live="polite">
-          <p className="checklist-overview-text">
-            <strong>{inspectedSectionCount}</strong> / {inspectionSectionTotal}{" "}
-            aree con contenuti ·             <strong>{visibleItems.length}</strong>{" "}
-            {focusSessionId !== null ? "visualizzate (contesto completo)" : "aperte"}{" "}
-            · <strong>{totalPhotoCount}</strong> allegati totali
-          </p>
-        </div>
-
         <div className="inspection-sections">
           {INSPECTION_SECTIONS.map((section) => (
             <InspectionSection

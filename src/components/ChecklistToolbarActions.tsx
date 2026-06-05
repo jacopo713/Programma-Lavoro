@@ -4,8 +4,10 @@ import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useChecklistContext } from "@/contexts/ChecklistContext";
 import { useAppToast } from "@/contexts/ToastContext";
+import { MOBILE_NAV_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { buildPdfBlob, getPdfFilename } from "@/lib/pdf/exportChecklistPdf";
 import { resolveCriticismsForPdf } from "@/lib/resolvePhotoForPdf";
+import { ChecklistOverview } from "./ChecklistOverview";
 import { PdfPreviewModal } from "./PdfPreviewModal";
 import { StationSelectControl } from "./StationSelectControl";
 
@@ -25,6 +27,7 @@ export function ChecklistToolbarActions() {
     hasReportContent,
   } = useChecklistContext();
 
+  const isMobile = useMediaQuery(MOBILE_NAV_QUERY);
   const [exportLoading, setExportLoading] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
@@ -44,11 +47,22 @@ export function ChecklistToolbarActions() {
   }, [pdfPreviewUrl]);
 
   const handleExport = () => {
-    if (!hasReportContent || exportLoading) return;
+    if (!hasReportContent || exportLoading) {
+      if (!hasReportContent) {
+        showToast("Aggiungi almeno una foto o una descrizione area", "warning");
+      }
+      return;
+    }
     setExportLoading(true);
+    showToast("Generazione PDF in corso…", "pdf");
     void (async () => {
       try {
-        closePdfPreview();
+        setPdfPreviewOpen(false);
+        setPdfPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return null;
+        });
+
         const itemsForPdf = await resolveCriticismsForPdf(items);
         const blob = await buildPdfBlob({
           items: itemsForPdf,
@@ -61,7 +75,12 @@ export function ChecklistToolbarActions() {
         const url = URL.createObjectURL(blob);
         setPdfPreviewUrl(url);
         setPdfPreviewOpen(true);
-        showToast("Anteprima PDF pronta", "pdf");
+        showToast(
+          isMobile
+            ? "PDF pronto — apri o scarica dal pannello"
+            : "Anteprima PDF pronta",
+          "pdf",
+        );
       } catch (err) {
         console.error("Errore PDF:", err);
         showToast("Errore nella generazione del PDF", "warning");
@@ -83,23 +102,29 @@ export function ChecklistToolbarActions() {
 
   return (
     <>
-      <button
-        type="button"
-        className={`btn-export${exportLoading ? " loading" : ""}`}
-        id="btnExport"
-        aria-label="Anteprima ed esporta checklist in PDF"
-        disabled={!hasReportContent || exportLoading}
-        onClick={handleExport}
-      >
-        <FileText size={16} className="export-icon" aria-hidden />
-        <Loader2 size={16} className="spinner animate-spin" aria-hidden />
-        <span className="btn-label">Anteprima PDF</span>
-      </button>
-      <StationSelectControl
-        stations={stations}
-        activeStationId={activeStationId}
-        onChange={handleStationChange}
-      />
+      <div className="checklist-toolbar">
+        <div className="checklist-toolbar-primary">
+          <button
+            type="button"
+            className={`btn-export${exportLoading ? " loading" : ""}`}
+            id="btnExport"
+            aria-label="Anteprima ed esporta checklist in PDF"
+            disabled={!hasReportContent || exportLoading}
+            onClick={handleExport}
+          >
+            <FileText size={16} className="export-icon" aria-hidden />
+            <Loader2 size={16} className="spinner animate-spin" aria-hidden />
+            <span className="btn-label">Anteprima PDF</span>
+          </button>
+          <StationSelectControl
+            className="checklist-toolbar-station"
+            stations={stations}
+            activeStationId={activeStationId}
+            onChange={handleStationChange}
+          />
+        </div>
+        <ChecklistOverview />
+      </div>
       <PdfPreviewModal
         open={pdfPreviewOpen}
         previewUrl={pdfPreviewUrl}

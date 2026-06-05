@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
-import { AuthBar } from "@/components/AuthBar";
+import { ResponsiveAccountBar } from "@/components/ResponsiveAccountBar";
 import { ChecklistToolbarActions } from "@/components/ChecklistToolbarActions";
 import { useChecklistContext } from "@/contexts/ChecklistContext";
 import { parseCriticismNavFilter } from "@/lib/criticismFilters";
@@ -64,13 +64,13 @@ export function PageToolbar() {
   }, [isChecklist]);
 
   return (
-    <header className="page-toolbar">
+    <header className={`page-toolbar${isChecklist ? " page-toolbar--checklist" : ""}`}>
       <div className="page-toolbar-leading">
         <PageToolbarLeading />
       </div>
       {actions ? <div className="page-toolbar-actions">{actions}</div> : null}
       <div className="page-toolbar-account">
-        <AuthBar />
+        <ResponsiveAccountBar placement="toolbar" />
       </div>
     </header>
   );

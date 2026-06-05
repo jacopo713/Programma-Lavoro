@@ -1,7 +1,8 @@
 "use client";
 
-import { Download, X } from "lucide-react";
+import { Download, ExternalLink, X } from "lucide-react";
 import { useEffect } from "react";
+import { MOBILE_NAV_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { downloadPdfBlob } from "@/lib/pdf/exportChecklistPdf";
 
 interface PdfPreviewModalProps {
@@ -17,6 +18,8 @@ export function PdfPreviewModal({
   filename,
   onClose,
 }: PdfPreviewModalProps) {
+  const isMobile = useMediaQuery(MOBILE_NAV_QUERY);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -35,10 +38,20 @@ export function PdfPreviewModal({
     try {
       const res = await fetch(previewUrl);
       const blob = await res.blob();
-      downloadPdfBlob(blob, filename);
+      const ok = downloadPdfBlob(blob, filename);
+      if (!ok) {
+        window.open(previewUrl, "_blank");
+      }
     } catch {
-      /* fallback: apri in nuova scheda */
       window.open(previewUrl, "_blank");
+    }
+  };
+
+  const handleOpen = () => {
+    if (!previewUrl) return;
+    const opened = window.open(previewUrl, "_blank");
+    if (!opened) {
+      void handleDownload();
     }
   };
 
@@ -63,14 +76,25 @@ export function PdfPreviewModal({
             <p className="pdf-preview-subtitle">{filename}</p>
           </div>
           <div className="pdf-preview-actions">
-            <button
-              type="button"
-              className="btn-save pdf-preview-download"
-              onClick={handleDownload}
-            >
-              <Download size={16} aria-hidden />
-              <span className="pdf-preview-download-label">Scarica PDF</span>
-            </button>
+            {isMobile ? (
+              <button
+                type="button"
+                className="btn-save pdf-preview-download"
+                onClick={handleOpen}
+              >
+                <ExternalLink size={16} aria-hidden />
+                <span>Apri PDF</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-save pdf-preview-download"
+                onClick={handleDownload}
+              >
+                <Download size={16} aria-hidden />
+                <span className="pdf-preview-download-label">Scarica PDF</span>
+              </button>
+            )}
             <button
               type="button"
               className="pdf-preview-close"
@@ -81,13 +105,40 @@ export function PdfPreviewModal({
             </button>
           </div>
         </header>
-        <div className="pdf-preview-body">
-          <iframe
-            src={previewUrl}
-            title={`Anteprima ${filename}`}
-            className="pdf-preview-iframe"
-          />
-        </div>
+        {isMobile ? (
+          <div className="pdf-preview-fallback">
+            <p className="pdf-preview-fallback-text">
+              L&apos;anteprima inline non è supportata su questo dispositivo.
+              Apri il PDF in una nuova scheda o scaricalo sul dispositivo.
+            </p>
+            <div className="pdf-preview-fallback-actions">
+              <button
+                type="button"
+                className="btn-save pdf-preview-fallback-btn"
+                onClick={handleOpen}
+              >
+                <ExternalLink size={16} aria-hidden />
+                Apri PDF
+              </button>
+              <button
+                type="button"
+                className="btn-export pdf-preview-fallback-btn"
+                onClick={handleDownload}
+              >
+                <Download size={16} aria-hidden />
+                Scarica PDF
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="pdf-preview-body">
+            <iframe
+              src={previewUrl}
+              title={`Anteprima ${filename}`}
+              className="pdf-preview-iframe"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
