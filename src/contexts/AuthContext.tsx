@@ -13,9 +13,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { clearLegacyBrowserWorkspace } from "@/lib/browserWorkspaceStorage";
 import {
   sendPasswordResetEmailForUser,
   signInWithGooglePopup,
@@ -48,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [justRegistered, setJustRegistered] = useState(false);
+  const previousUidRef = useRef<string | null>(null);
   const configured = isFirebaseConfigured();
 
   useEffect(() => {
@@ -58,6 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      const nextUid = nextUser?.uid ?? null;
+      const previousUid = previousUidRef.current;
+
+      if (previousUid && nextUid && previousUid !== nextUid) {
+        clearLegacyBrowserWorkspace();
+      }
+
+      previousUidRef.current = nextUid;
       setUser(nextUser);
       setLoading(false);
     });

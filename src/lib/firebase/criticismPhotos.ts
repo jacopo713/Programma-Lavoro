@@ -93,8 +93,31 @@ export async function deleteStationPhotos(
 ): Promise<void> {
   try {
     const folderRef = stationPhotosPrefixRef(uid, stationId);
-    const listing = await listAll(folderRef);
-    await Promise.all(listing.items.map((itemRef) => deleteObject(itemRef)));
+    await deleteStorageTree(folderRef);
+  } catch (error) {
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code: string }).code)
+        : "";
+    if (code === "storage/object-not-found") return;
+    throw new Error(firebaseStorageErrorMessage(error));
+  }
+}
+
+async function deleteStorageTree(folderRef: ReturnType<typeof ref>): Promise<void> {
+  const listing = await listAll(folderRef);
+  await Promise.all(listing.items.map((itemRef) => deleteObject(itemRef)));
+  await Promise.all(listing.prefixes.map((prefixRef) => deleteStorageTree(prefixRef)));
+}
+
+/** Elimina tutte le foto sotto users/{uid}/ (ricorsivo). */
+export async function deleteAllUserStorage(uid: string): Promise<void> {
+  const storage = getFirebaseStorage();
+  if (!storage) return;
+
+  try {
+    const userRootRef = ref(storage, `users/${uid}`);
+    await deleteStorageTree(userRootRef);
   } catch (error) {
     const code =
       error && typeof error === "object" && "code" in error

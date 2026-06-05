@@ -12,10 +12,12 @@ import {
   workspaceRegistryCacheKey,
   workspaceStationCacheKey,
 } from "@/lib/constants";
+import { isRemotePhoto } from "@/lib/criticismDisplay";
 import { createEmptySectionDescriptions } from "@/lib/sectionDescriptions";
-import { loadRegistry } from "@/lib/stationsStorage";
+import { getDefaultRegistry, loadRegistry } from "@/lib/stationsStorage";
 import {
   getChecklistForStation,
+  getDefaultChecklist,
   initializeMultiStationState,
   loadChecklistForStation,
 } from "@/lib/storage";
@@ -204,10 +206,27 @@ function pickRegistry(
   return isNewer(remote.updatedAt, local.updatedAt) ? remote : local;
 }
 
+function sanitizeChecklistForUid(
+  checklist: ChecklistPersisted,
+  uid: string,
+): ChecklistPersisted {
+  const uidPath = `/users/${uid}/`;
+  return {
+    ...checklist,
+    items: checklist.items.map((item) => ({
+      ...item,
+      photos: item.photos.filter(
+        (photo) => !isRemotePhoto(photo) || photo.includes(uidPath),
+      ),
+    })),
+  };
+}
+
 function pickChecklist(
   remote: StationChecklistDoc | null,
   local: StationChecklistDoc | null,
   stationName: string,
+  uid: string,
 ): ChecklistPersisted {
   const remoteChecklist = remote
     ? normalizeChecklistDoc(remote, stationName)
@@ -217,19 +236,42 @@ function pickChecklist(
     : null;
 
   if (!remote) {
-    return localChecklist ?? {
-      version: 3,
-      items: [],
-      idCounter: 0,
-      stationName,
-      sectionDescriptions: createEmptySectionDescriptions(),
-    };
+    return sanitizeChecklistForUid(
+      localChecklist ?? {
+        version: 3,
+        items: [],
+        idCounter: 0,
+        stationName,
+        sectionDescriptions: createEmptySectionDescriptions(),
+      },
+      uid,
+    );
   }
-  if (!local) return remoteChecklist!;
+  if (!local) {
+    return sanitizeChecklistForUid(remoteChecklist!, uid);
+  }
 
-  return isNewer(remote.updatedAt, local.updatedAt)
+  const picked = isNewer(remote.updatedAt, local.updatedAt)
     ? remoteChecklist!
     : localChecklist!;
+  return sanitizeChecklistForUid(picked, uid);
+}
+
+function createFreshLoadedWorkspace(): LoadedWorkspace {
+  const registry = getDefaultRegistry();
+  const active = registry.stations[0];
+  if (!active) {
+    throw new Error("Registry stazioni non valido");
+  }
+  return {
+    registry,
+    checklistsByStationId: {
+      [active.id]: {
+        ...getDefaultChecklist(),
+        stationName: active.name,
+      },
+    },
+  };
 }
 
 function localWorkspaceFromBrowser(): LoadedWorkspace | null {
@@ -307,7 +349,8 @@ export async function loadWorkspace(uid: string): Promise<LoadedWorkspace> {
     }
   }
 
-  const localBootstrap = localWorkspaceFromBrowser();
+  const remoteIsEmpty = !remoteRegistry && remoteChecklists.size === 0;
+  const localBootstrap = remoteIsEmpty ? null : localWorkspaceFromBrowser();
   const localRegistryDoc: WorkspaceRegistryDoc | null = localBootstrap
     ? {
         ...localBootstrap.registry,
@@ -318,6 +361,9 @@ export async function loadWorkspace(uid: string): Promise<LoadedWorkspace> {
   const mergedRegistry = pickRegistry(remoteRegistry, cachedRegistry ?? localRegistryDoc);
 
   if (!mergedRegistry || mergedRegistry.stations.length === 0) {
+    if (remoteIsEmpty && !cachedRegistry) {
+      return createFreshLoadedWorkspace();
+    }
     const fallback = localBootstrap ?? {
       registry: initializeMultiStationState().registry,
       checklistsByStationId: {},
@@ -329,7 +375,7 @@ export async function loadWorkspace(uid: string): Promise<LoadedWorkspace> {
   for (const station of mergedRegistry.stations) {
     const remote = remoteChecklists.get(station.id) ?? null;
     const cached = readCachedStationDoc(uid, station.id);
-    const localSaved = loadChecklistForStation(station.id);
+    const localSaved = remoteIsEmpty ? null : loadChecklistForStation(station.id);
     const localDoc: StationChecklistDoc | null = localSaved
       ? { ...localSaved, updatedAt: nowIso() }
       : null;
@@ -338,6 +384,7 @@ export async function loadWorkspace(uid: string): Promise<LoadedWorkspace> {
       remote,
       cached ?? localDoc,
       station.name,
+      uid,
     );
   }
 
@@ -346,7 +393,7 @@ export async function loadWorkspace(uid: string): Promise<LoadedWorkspace> {
     writeCachedStationDoc(uid, stationId, toStationDoc(checklist));
   }
 
-  if (!remoteRegistry && localBootstrap) {
+  if (!remoteRegistry && localBootstrap && !remoteIsEmpty) {
     await pushWorkspaceToCloud(uid, {
       registry: mergedRegistry,
       checklistsByStationId,

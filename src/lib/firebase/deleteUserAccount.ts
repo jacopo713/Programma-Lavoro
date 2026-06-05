@@ -1,24 +1,19 @@
 import { collection, deleteDoc, doc, enableNetwork, getDocs } from "firebase/firestore";
 import type { User } from "firebase/auth";
-import {
-  PROFILE_CACHE_KEY_PREFIX,
-  WORKSPACE_REGISTRY_CACHE_PREFIX,
-  WORKSPACE_STATION_CACHE_PREFIX,
-  profileCacheKey,
-  workspaceRegistryCacheKey,
-  workspaceStationCacheKey,
-} from "@/lib/constants";
+import { clearAllLocalDataAfterAccountDeletion } from "@/lib/browserWorkspaceStorage";
+import { profileCacheKey, workspaceRegistryCacheKey } from "@/lib/constants";
 import type { WorkspaceRegistryDoc } from "@/lib/types";
 import {
   deleteFirebaseAuthUser,
   reauthenticateUser,
   type ReauthenticateInput,
 } from "./authActions";
-import { deleteStationPhotos } from "./criticismPhotos";
+import { deleteAllUserStorage } from "./criticismPhotos";
 import { getFirestoreDb } from "./client";
 
 const USERS_COLLECTION = "users";
 const WORKSPACE_COLLECTION = "workspace";
+const REGISTRY_DOC_ID = "registry";
 
 async function ensureFirestoreOnline(): Promise<void> {
   const db = getFirestoreDb();
@@ -46,32 +41,6 @@ function readCachedStationIds(uid: string): string[] {
   }
 }
 
-function clearLocalUserCaches(uid: string, stationIds: string[]): void {
-  if (typeof localStorage === "undefined") return;
-
-  localStorage.removeItem(profileCacheKey(uid));
-  localStorage.removeItem(workspaceRegistryCacheKey(uid));
-
-  const uniqueStationIds = new Set(stationIds);
-  for (const stationId of uniqueStationIds) {
-    localStorage.removeItem(workspaceStationCacheKey(uid, stationId));
-  }
-
-  const uidMarkers = [
-    `${PROFILE_CACHE_KEY_PREFIX}:${uid}`,
-    `${WORKSPACE_REGISTRY_CACHE_PREFIX}:${uid}`,
-    `${WORKSPACE_STATION_CACHE_PREFIX}:${uid}:`,
-  ];
-
-  for (let index = localStorage.length - 1; index >= 0; index -= 1) {
-    const key = localStorage.key(index);
-    if (!key) continue;
-    if (uidMarkers.some((marker) => key.startsWith(marker))) {
-      localStorage.removeItem(key);
-    }
-  }
-}
-
 export async function purgeUserData(uid: string): Promise<void> {
   const db = getFirestoreDb();
   if (!db) {
@@ -85,21 +54,24 @@ export async function purgeUserData(uid: string): Promise<void> {
   const stationIds = new Set(readCachedStationIds(uid));
 
   for (const stationDoc of workspaceSnap.docs) {
-    if (stationDoc.id !== "registry") {
+    if (stationDoc.id !== REGISTRY_DOC_ID) {
       stationIds.add(stationDoc.id);
     }
   }
 
-  for (const stationId of stationIds) {
-    await deleteStationPhotos(uid, stationId);
-  }
+  await deleteAllUserStorage(uid);
 
   for (const stationDoc of workspaceSnap.docs) {
     await deleteDoc(stationDoc.ref);
   }
 
   await deleteDoc(doc(db, USERS_COLLECTION, uid));
-  clearLocalUserCaches(uid, [...stationIds]);
+
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem(profileCacheKey(uid));
+  }
+
+  clearAllLocalDataAfterAccountDeletion(uid, stationIds);
 }
 
 export async function deleteUserAccount(
