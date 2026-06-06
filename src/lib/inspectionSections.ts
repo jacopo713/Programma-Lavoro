@@ -20,7 +20,7 @@ export interface InspectionSectionDef {
   hint: string;
   /** Placeholder breve nel campo descrizione (UI) */
   descriptionPlaceholder: string;
-  /** Elenco puntato guida nel PDF */
+  /** Testo guida di riferimento (non esportato nel PDF) */
   descriptionExample: string;
 }
 

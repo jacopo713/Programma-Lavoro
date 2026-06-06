@@ -64,8 +64,12 @@ export const PDF_LAYOUT = {
   marginL: 14,
   marginR: 14,
   pageTop: 18,
-  /** Limite contenuto (footer disegnato a y≈282) */
-  pageBottom: 279,
+  footerLineMm: 282,
+  footerTextMm: 287,
+  /** Buffer tra contenuto e linea footer */
+  contentFooterGapMm: 8,
+  /** Limite contenuto (sotto questa Y non si disegna corpo pagina) */
+  pageBottom: 274,
   metaLabelColMm: 42,
   /** Righe max nell'elenco compatto «Sintesi area» prima del dettaglio */
   sectionSummaryMaxLines: 8,

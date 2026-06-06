@@ -10,6 +10,7 @@ import {
   getSectionDescription,
   type SectionDescriptions,
 } from "@/lib/sectionDescriptions";
+import { isSectionIncludedInReport } from "@/lib/sectionReport";
 import {
   getSeverityBannerLabel,
   getSeverityLabel,
@@ -100,7 +101,7 @@ export async function buildPdfBlob({
   let y = 0;
 
   function need(h: number) {
-    if (y + h > PAGE_BOTTOM) {
+    if (y + h >= PAGE_BOTTOM) {
       doc.addPage();
       y = PAGE_TOP;
     }
@@ -341,6 +342,9 @@ function drawInspectionDetail(
   y += L.gapMd;
 
   for (const section of INSPECTION_SECTIONS) {
+    if (!isSectionIncludedInReport(section.id, items, sectionDescriptions)) {
+      continue;
+    }
     y = drawSectionChapter(
       doc,
       section,
@@ -368,39 +372,6 @@ function measureSectionNarrativeHeight(
   doc.setFontSize(T.body);
   const lines = doc.splitTextToSize(text, widthMm) as string[];
   return L.gapSm + lines.length * L.lineBody + L.gapSm;
-}
-
-function measureSectionExampleHeight(
-  doc: jsPDF,
-  text: string,
-  widthMm: number,
-): number {
-  if (!text) return 0;
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(T.sectionHint);
-  const lines = doc.splitTextToSize(text, widthMm) as string[];
-  return L.gapSm + lines.length * (L.lineBody - 0.4) + L.gapSm;
-}
-
-function drawSectionDescriptionExample(
-  doc: jsPDF,
-  text: string,
-  mL: number,
-  uW: number,
-  startY: number,
-): number {
-  if (!text) return startY;
-  let y = startY + L.gapSm;
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(T.sectionHint);
-  doc.setTextColor(...PDF_THEME.textSecondary);
-  const lines = doc.splitTextToSize(text, uW) as string[];
-  for (const line of lines) {
-    doc.text(line, mL, y);
-    y += L.lineBody - 0.4;
-  }
-  doc.setTextColor(...PDF_THEME.text);
-  return y + L.gapSm;
 }
 
 function drawSectionNarrative(
@@ -438,8 +409,9 @@ function drawSectionChapter(
   const sectionItems = getSectionItems(allItems, section.id);
   const narrative = getSectionDescription(sectionDescriptions, section.id);
 
+  need(measureSectionChapterMinHeight(doc, narrative, sectionItems, uW));
+
   let y = startY;
-  need(L.gapMd + 6);
   y += L.gapMd;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(T.sectionTitle);
@@ -459,17 +431,6 @@ function drawSectionChapter(
     doc.text(allegatiLabel, pageW - mR - doc.getTextWidth(allegatiLabel), y);
   }
   y += L.gapMd;
-
-  if (section.descriptionExample) {
-    need(measureSectionExampleHeight(doc, section.descriptionExample, uW));
-    y = drawSectionDescriptionExample(
-      doc,
-      section.descriptionExample,
-      mL,
-      uW,
-      y,
-    );
-  }
 
   if (narrative) {
     need(measureSectionNarrativeHeight(doc, narrative, uW));
@@ -679,6 +640,30 @@ function measurePhotoRowHeight(
     );
   }
   return rowH;
+}
+
+function measureSectionHeaderBlock(): number {
+  return L.gapMd + L.lineTitle + L.gapMd;
+}
+
+function measureSectionChapterMinHeight(
+  doc: jsPDF,
+  narrative: string,
+  sectionItems: Criticism[],
+  uW: number,
+): number {
+  let h = measureSectionHeaderBlock();
+  if (narrative) {
+    h += measureSectionNarrativeHeight(doc, narrative, uW);
+  } else if (sectionItems.length > 0) {
+    h += L.gapSm;
+  }
+  if (sectionItems.length > 0) {
+    const cellW = photoEntryCellWidth(uW);
+    const firstRowItems = sectionItems.slice(0, PHOTO_ENTRY_COLS);
+    h += measurePhotoRowHeight(doc, firstRowItems, cellW, cellW);
+  }
+  return h;
 }
 
 function drawPhotoEntryCell(
@@ -963,13 +948,21 @@ function stampFooters(doc: jsPDF, pageW: number, mL: number, mR: number) {
     doc.setPage(i);
     doc.setDrawColor(...PDF_THEME.border);
     doc.setLineWidth(0.25);
-    doc.line(mL, 282, pageW - mR, 282);
+    doc.line(mL, L.footerLineMm, pageW - mR, L.footerLineMm);
     doc.setFontSize(T.footer);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...PDF_THEME.textMuted);
-    doc.text(`${APP_NAME} — Documento generato automaticamente`, mL, 287);
+    doc.text(
+      `${APP_NAME} — Documento generato automaticamente`,
+      mL,
+      L.footerTextMm,
+    );
     const pgTxt = `Pagina ${i} / ${n}`;
-    doc.text(pgTxt, pageW - mR - doc.getTextWidth(pgTxt), 287);
+    doc.text(
+      pgTxt,
+      pageW - mR - doc.getTextWidth(pgTxt),
+      L.footerTextMm,
+    );
   }
 }
 

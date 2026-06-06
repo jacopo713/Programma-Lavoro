@@ -38,9 +38,8 @@ import {
 const CRITICISM_SUBNAV: {
   filter: CriticismNavFilter;
   label: string;
-  countKey: "open" | "monitor" | "moderate" | "grave" | "resolved";
+  countKey: "monitor" | "moderate" | "grave" | "resolved";
 }[] = [
-  { filter: { type: "all" }, label: "Tutti", countKey: "open" },
   { filter: { type: "severity", level: 1 }, label: "Monitoraggio", countKey: "monitor" },
   {
     filter: { type: "severity", level: 2 },

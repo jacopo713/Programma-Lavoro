@@ -23,9 +23,9 @@ import {
 } from "@/lib/inspectionSections";
 import {
   createEmptySectionDescriptions,
-  getSectionDescription,
   type SectionDescriptions,
 } from "@/lib/sectionDescriptions";
+import { isSectionIncludedInReport } from "@/lib/sectionReport";
 import {
   createStationRecord,
   saveRegistrySafe,
@@ -620,25 +620,22 @@ export function useChecklist(
     [items],
   );
 
-  const countsBySection = useMemo(() => {
-    const map = new Map<SectionId, number>();
-    for (const item of items) {
-      map.set(item.sectionId, (map.get(item.sectionId) ?? 0) + 1);
-    }
-    return map;
-  }, [items]);
-
   const totalCount = items.length;
   const inspectedSectionCount = useMemo(() => {
     let n = 0;
     for (const section of INSPECTION_SECTIONS) {
-      const hasItems = (countsBySection.get(section.id) ?? 0) > 0;
-      const hasDesc =
-        getSectionDescription(sectionDescriptions, section.id).length > 0;
-      if (hasItems || hasDesc) n += 1;
+      if (
+        isSectionIncludedInReport(
+          section.id,
+          items,
+          sectionDescriptions,
+        )
+      ) {
+        n += 1;
+      }
     }
     return n;
-  }, [countsBySection, sectionDescriptions]);
+  }, [items, sectionDescriptions]);
 
   const hasReportContent = useMemo(() => {
     if (totalCount > 0) return true;

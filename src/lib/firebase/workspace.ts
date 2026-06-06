@@ -206,18 +206,28 @@ function pickRegistry(
   return isNewer(remote.updatedAt, local.updatedAt) ? remote : local;
 }
 
+function photoBelongsToUser(photo: string, uid: string): boolean {
+  if (!isRemotePhoto(photo)) return true;
+  const literalPath = `/users/${uid}/`;
+  if (photo.includes(literalPath)) return true;
+  const encodedPath = `users%2F${uid}%2F`;
+  if (photo.includes(encodedPath)) return true;
+  try {
+    return decodeURIComponent(photo).includes(literalPath);
+  } catch {
+    return false;
+  }
+}
+
 function sanitizeChecklistForUid(
   checklist: ChecklistPersisted,
   uid: string,
 ): ChecklistPersisted {
-  const uidPath = `/users/${uid}/`;
   return {
     ...checklist,
     items: checklist.items.map((item) => ({
       ...item,
-      photos: item.photos.filter(
-        (photo) => !isRemotePhoto(photo) || photo.includes(uidPath),
-      ),
+      photos: item.photos.filter((photo) => photoBelongsToUser(photo, uid)),
     })),
   };
 }
