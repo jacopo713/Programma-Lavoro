@@ -1,13 +1,7 @@
-import {
-  doc,
-  enableNetwork,
-  getDoc,
-  setDoc,
-  type DocumentData,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc, type DocumentData } from "firebase/firestore";
 import { updateProfile } from "firebase/auth";
 import { profileCacheKey } from "@/lib/constants";
-import { getFirestoreDb, getFirebaseAuth } from "./client";
+import { ensureFirestoreOnline, getFirestoreDb, getFirebaseAuth } from "./client";
 import {
   firestoreErrorMessage,
   isFirestoreOfflineError,
@@ -22,19 +16,6 @@ function profileDocRef(uid: string) {
     throw new Error("Firestore non configurato");
   }
   return doc(db, USERS_COLLECTION, uid);
-}
-
-async function ensureFirestoreOnline(): Promise<void> {
-  const db = getFirestoreDb();
-  if (!db) {
-    throw new Error("Firestore non configurato");
-  }
-
-  try {
-    await enableNetwork(db);
-  } catch {
-    /* proceed: enableNetwork can fail if already online */
-  }
 }
 
 function normalizeProfile(data: DocumentData): UserProfile {

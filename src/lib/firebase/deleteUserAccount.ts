@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, enableNetwork, getDocs } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { clearAllLocalDataAfterAccountDeletion } from "@/lib/browserWorkspaceStorage";
 import { profileCacheKey, workspaceRegistryCacheKey } from "@/lib/constants";
@@ -9,24 +9,11 @@ import {
   type ReauthenticateInput,
 } from "./authActions";
 import { deleteAllUserStorage } from "./criticismPhotos";
-import { getFirestoreDb } from "./client";
+import { ensureFirestoreOnline, getFirestoreDb } from "./client";
 
 const USERS_COLLECTION = "users";
 const WORKSPACE_COLLECTION = "workspace";
 const REGISTRY_DOC_ID = "registry";
-
-async function ensureFirestoreOnline(): Promise<void> {
-  const db = getFirestoreDb();
-  if (!db) {
-    throw new Error("Firestore non configurato");
-  }
-
-  try {
-    await enableNetwork(db);
-  } catch {
-    /* proceed */
-  }
-}
 
 function readCachedStationIds(uid: string): string[] {
   if (typeof localStorage === "undefined") return [];

@@ -2,7 +2,6 @@ import {
   collection,
   deleteDoc,
   doc,
-  enableNetwork,
   getDoc,
   getDocs,
   setDoc,
@@ -27,7 +26,7 @@ import type {
   StationsRegistry,
   WorkspaceRegistryDoc,
 } from "@/lib/types";
-import { getFirestoreDb } from "./client";
+import { ensureFirestoreOnline, getFirestoreDb } from "./client";
 import {
   firestoreErrorMessage,
   isFirestoreOfflineError,
@@ -63,18 +62,6 @@ function stationDocRef(uid: string, stationId: string) {
     throw new Error("Firestore non configurato");
   }
   return doc(db, "users", uid, WORKSPACE_COLLECTION, stationId);
-}
-
-async function ensureFirestoreOnline(): Promise<void> {
-  const db = getFirestoreDb();
-  if (!db) {
-    throw new Error("Firestore non configurato");
-  }
-  try {
-    await enableNetwork(db);
-  } catch {
-    /* already online */
-  }
 }
 
 function nowIso(): string {

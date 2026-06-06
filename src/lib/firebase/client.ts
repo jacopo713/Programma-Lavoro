@@ -1,6 +1,7 @@
 import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import {
+  enableNetwork,
   getFirestore,
   initializeFirestore,
   type Firestore,
@@ -12,6 +13,7 @@ let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let storage: FirebaseStorage | undefined;
 let firestore: Firestore | undefined;
+let firestoreOnlinePromise: Promise<void> | null = null;
 
 function getFirebaseApp(): FirebaseApp | null {
   if (!isFirebaseConfigured() || typeof window === "undefined") {
@@ -62,4 +64,20 @@ export function getFirestoreDb(): Firestore | null {
   }
 
   return firestore;
+}
+
+/** Call once per session; concurrent enableNetwork() triggers Firestore SDK crashes. */
+export async function ensureFirestoreOnline(): Promise<void> {
+  const db = getFirestoreDb();
+  if (!db) {
+    throw new Error("Firestore non configurato");
+  }
+
+  if (!firestoreOnlinePromise) {
+    firestoreOnlinePromise = enableNetwork(db).catch(() => {
+      /* proceed: enableNetwork can fail if already online */
+    });
+  }
+
+  await firestoreOnlinePromise;
 }

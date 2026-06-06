@@ -186,8 +186,6 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       const next = await completeOnboarding(user.uid, input, profile);
       setProfile(next);
       autoOpenedRef.current = true;
-      manualWizardRef.current = false;
-      setWizardOpen(false);
     },
     [user, profile],
   );
