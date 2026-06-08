@@ -6,7 +6,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -43,14 +42,17 @@ type UserProfileContextValue = {
 const UserProfileContext = createContext<UserProfileContextValue | null>(null);
 
 export function UserProfileProvider({ children }: { children: ReactNode }) {
-  const { user, configured, loading: authLoading } = useAuth();
+  const {
+    user,
+    configured,
+    loading: authLoading,
+    justRegistered,
+    clearJustRegistered,
+  } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
-  const autoOpenedRef = useRef(false);
-  const manualWizardRef = useRef(false);
-  const lastUidRef = useRef<string | null>(null);
 
   const refreshProfile = useCallback(async () => {
     const uid = user?.uid;
@@ -98,16 +100,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       }
       setWizardOpen(false);
       setProfileLoadError(null);
-      autoOpenedRef.current = false;
-      manualWizardRef.current = false;
-      lastUidRef.current = null;
       return;
-    }
-
-    const uidChanged = lastUidRef.current !== user.uid;
-    if (uidChanged) {
-      autoOpenedRef.current = false;
-      lastUidRef.current = user.uid;
     }
 
     setLoading(true);
@@ -127,23 +120,16 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   }, [user, loading, authLoading, profile]);
 
   useEffect(() => {
-    if (!needsOnboarding || autoOpenedRef.current || loading || authLoading) return;
-    autoOpenedRef.current = true;
+    if (!user || !justRegistered) return;
     setWizardOpen(true);
-  }, [needsOnboarding, loading, authLoading]);
-
-  useEffect(() => {
-    if (needsOnboarding || !wizardOpen || manualWizardRef.current) return;
-    setWizardOpen(false);
-  }, [needsOnboarding, wizardOpen]);
+    clearJustRegistered();
+  }, [user, justRegistered, clearJustRegistered]);
 
   const openWizard = useCallback(() => {
-    manualWizardRef.current = true;
     setWizardOpen(true);
   }, []);
 
   const closeWizard = useCallback(() => {
-    manualWizardRef.current = false;
     setWizardOpen(false);
   }, []);
 
@@ -155,7 +141,6 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     try {
       const next = await skipOnboarding(user.uid, profile);
       setProfile(next);
-      autoOpenedRef.current = true;
     } catch (error) {
       console.error("Impossibile registrare skip onboarding:", error);
       const now = new Date().toISOString();
@@ -171,9 +156,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       };
       writeCachedUserProfile(user.uid, fallback);
       setProfile(fallback);
-      autoOpenedRef.current = true;
     } finally {
-      manualWizardRef.current = false;
       setWizardOpen(false);
     }
   }, [user, profile]);
@@ -185,7 +168,6 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       }
       const next = await completeOnboarding(user.uid, input, profile);
       setProfile(next);
-      autoOpenedRef.current = true;
     },
     [user, profile],
   );
@@ -196,8 +178,6 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     }
     const next = await skipOnboarding(user.uid, profile);
     setProfile(next);
-    autoOpenedRef.current = true;
-    manualWizardRef.current = false;
     setWizardOpen(false);
   }, [user, profile]);
 

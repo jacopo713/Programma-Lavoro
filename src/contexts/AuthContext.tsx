@@ -106,7 +106,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    await signInWithGooglePopup();
+    const { isNewUser } = await signInWithGooglePopup();
+    if (isNewUser) {
+      setJustRegistered(true);
+    }
   }, []);
 
   const sendPasswordReset = useCallback(async (email: string) => {

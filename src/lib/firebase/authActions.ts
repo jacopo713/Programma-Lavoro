@@ -1,6 +1,7 @@
 import {
   deleteUser,
   EmailAuthProvider,
+  getAdditionalUserInfo,
   GoogleAuthProvider,
   reauthenticateWithCredential,
   reauthenticateWithPopup,
@@ -34,7 +35,7 @@ export function userHasGoogleProvider(user: User): boolean {
   return getAuthProviders(user).includes("google.com");
 }
 
-export async function signInWithGooglePopup(): Promise<void> {
+export async function signInWithGooglePopup(): Promise<{ isNewUser: boolean }> {
   const auth = getFirebaseAuth();
   if (!auth) {
     throw new Error("Firebase non configurato");
@@ -42,7 +43,8 @@ export async function signInWithGooglePopup(): Promise<void> {
 
   const provider = new GoogleAuthProvider();
   try {
-    await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    return { isNewUser: getAdditionalUserInfo(result)?.isNewUser ?? false };
   } catch (error) {
     if (
       error &&
