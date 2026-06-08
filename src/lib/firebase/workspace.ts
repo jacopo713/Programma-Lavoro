@@ -12,6 +12,7 @@ import {
   workspaceStationCacheKey,
 } from "@/lib/constants";
 import { isRemotePhoto } from "@/lib/criticismDisplay";
+import { normalizeReportDate } from "@/lib/format";
 import { createEmptySectionDescriptions } from "@/lib/sectionDescriptions";
 import { getDefaultRegistry, loadRegistry } from "@/lib/stationsStorage";
 import {
@@ -92,6 +93,7 @@ function normalizeChecklistDoc(
         ? data.stationName
         : stationName,
     sectionDescriptions,
+    reportDate: normalizeReportDate(data.reportDate),
   };
 }
 
@@ -240,6 +242,7 @@ function pickChecklist(
         idCounter: 0,
         stationName,
         sectionDescriptions: createEmptySectionDescriptions(),
+        reportDate: "",
       },
       uid,
     );

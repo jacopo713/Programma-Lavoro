@@ -6,6 +6,7 @@ import {
   STORAGE_KEY_V1,
   STORAGE_KEY_V2,
 } from "./constants";
+import { normalizeReportDate } from "./format";
 import {
   createStationRecord,
   getDefaultRegistry,
@@ -116,6 +117,7 @@ function normalizeChecklist(data: ChecklistPersisted): ChecklistPersisted {
     idCounter: data.idCounter,
     stationName: normalizeRegistryStationName(data.stationName),
     sectionDescriptions: normalizeSectionDescriptions(data.sectionDescriptions),
+    reportDate: normalizeReportDate(data.reportDate),
     items: rawItems.map((item) => normalizeItem(item, usedFourLevels)),
   };
 }
@@ -145,6 +147,7 @@ function migrateV1(parsed: ChecklistPersistedV1): ChecklistPersisted {
     idCounter: parsed.idCounter ?? 0,
     stationName: DEFAULT_STATION_NAME,
     sectionDescriptions: createEmptySectionDescriptions(),
+    reportDate: "",
   };
 }
 
@@ -156,6 +159,7 @@ function migrateV2(parsed: ChecklistPersistedV2): ChecklistPersisted {
     idCounter: parsed.idCounter,
     stationName: DEFAULT_STATION_NAME,
     sectionDescriptions: createEmptySectionDescriptions(),
+    reportDate: "",
     items: rawItems.map((item) =>
       normalizeItem(
         {
@@ -187,6 +191,7 @@ function parsePersisted(raw: string): ChecklistPersisted | null {
         idCounter: data.idCounter,
         stationName: (data as ChecklistPersisted).stationName,
         sectionDescriptions: (data as ChecklistPersisted).sectionDescriptions,
+        reportDate: (data as ChecklistPersisted).reportDate,
       });
     }
     return migrateV2({
@@ -252,6 +257,7 @@ export function getDefaultChecklist(): ChecklistPersisted {
     idCounter: 0,
     stationName: DEFAULT_STATION_NAME,
     sectionDescriptions: createEmptySectionDescriptions(),
+    reportDate: "",
   };
 }
 

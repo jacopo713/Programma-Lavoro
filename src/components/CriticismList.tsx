@@ -1,6 +1,5 @@
 "use client";
 
-import { Clipboard } from "lucide-react";
 import type { Criticism, SeverityLevel } from "@/lib/types";
 import { AddCriticismForm, type CriticismFormInitial } from "./AddCriticismForm";
 import { CriticismCard } from "./CriticismCard";
@@ -41,15 +40,7 @@ export function CriticismList({
   saving = false,
 }: CriticismListProps) {
   if (items.length === 0) {
-    return (
-      <div className="criticism-list">
-        <div className="criticism-list-empty empty-state">
-          <Clipboard size={36} strokeWidth={1.5} aria-hidden />
-          <p>Nessuna foto in questa area</p>
-          <small>Usa «Aggiungi foto» per allegare una o più immagini</small>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (

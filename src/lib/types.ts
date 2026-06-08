@@ -33,6 +33,8 @@ export interface ChecklistPersisted {
   idCounter: number;
   stationName: string;
   sectionDescriptions: SectionDescriptions;
+  /** Data di redazione scelta dall'utente, formato ISO YYYY-MM-DD ("" se non impostata) */
+  reportDate: string;
 }
 
 /** Formato v2 (senza sezione) per migrazione localStorage */

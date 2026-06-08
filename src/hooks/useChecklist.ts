@@ -8,7 +8,11 @@ import {
   isRemotePhoto,
 } from "@/lib/criticismDisplay";
 import { DEFAULT_STATION_NAME, MAX_STATION_NAME_LENGTH } from "@/lib/constants";
-import { formatDateTimeIT } from "@/lib/format";
+import {
+  formatDateTimeIT,
+  isReportDateInWindow,
+  normalizeReportDate,
+} from "@/lib/format";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import {
   deleteAllCriticismPhotos,
@@ -62,12 +66,14 @@ function applyChecklistState(
     setIdCounter: (id: number) => void;
     setStationName: (name: string) => void;
     setSectionDescriptions: (descriptions: SectionDescriptions) => void;
+    setReportDate: (date: string) => void;
   },
 ) {
   setters.setItems(checklist.items);
   setters.setIdCounter(checklist.idCounter);
   setters.setStationName(checklist.stationName);
   setters.setSectionDescriptions(checklist.sectionDescriptions);
+  setters.setReportDate(checklist.reportDate);
 }
 
 function getCurrentUserId(): string | null {
@@ -117,6 +123,7 @@ export function useChecklist(
   const [stationName, setStationName] = useState(DEFAULT_STATION_NAME);
   const [sectionDescriptions, setSectionDescriptions] =
     useState<SectionDescriptions>(createEmptySectionDescriptions);
+  const [reportDate, setReportDate] = useState("");
   const [stations, setStations] = useState<Station[]>([]);
   const [activeStationId, setActiveStationId] = useState("");
   const [hydrated, setHydrated] = useState(false);
@@ -234,6 +241,7 @@ export function useChecklist(
           setIdCounter,
           setStationName,
           setSectionDescriptions,
+          setReportDate,
         });
         setCloudSynced(true);
         setHydrated(true);
@@ -259,14 +267,16 @@ export function useChecklist(
       nextIdCounter: number,
       nextStationName: string = stationName,
       nextSectionDescriptions: SectionDescriptions = sectionDescriptions,
+      nextReportDate: string = reportDate,
     ): ChecklistPersisted => ({
       version: 3,
       items: nextItems,
       idCounter: nextIdCounter,
       stationName: nextStationName,
       sectionDescriptions: nextSectionDescriptions,
+      reportDate: nextReportDate,
     }),
-    [stationName, sectionDescriptions],
+    [stationName, sectionDescriptions, reportDate],
   );
 
   const persistActive = useCallback(
@@ -301,6 +311,7 @@ export function useChecklist(
           setIdCounter,
           setStationName,
           setSectionDescriptions,
+          setReportDate,
         });
         return true;
       } catch {
@@ -416,6 +427,7 @@ export function useChecklist(
       setIdCounter,
       setStationName,
       setSectionDescriptions,
+      setReportDate,
     });
   }, [activeStationId, stations, stationName]);
 
@@ -457,6 +469,7 @@ export function useChecklist(
             setIdCounter,
             setStationName,
             setSectionDescriptions,
+            setReportDate,
           });
         }
         return true;
@@ -578,6 +591,7 @@ export function useChecklist(
               setIdCounter,
               setStationName,
               setSectionDescriptions,
+              setReportDate,
             });
           }
         }
@@ -615,6 +629,23 @@ export function useChecklist(
       try {
         persistActive(snapshot(items, idCounter, stationName, nextDescriptions));
         setSectionDescriptions(nextDescriptions);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [items, idCounter, stationName, sectionDescriptions, persistActive, snapshot],
+  );
+
+  const setReportDateAndSave = useCallback(
+    (date: string): boolean => {
+      const normalized = normalizeReportDate(date);
+      if (normalized && !isReportDateInWindow(normalized)) return false;
+      try {
+        persistActive(
+          snapshot(items, idCounter, stationName, sectionDescriptions, normalized),
+        );
+        setReportDate(normalized);
         return true;
       } catch {
         return false;
@@ -916,6 +947,8 @@ export function useChecklist(
     items,
     stationName,
     sectionDescriptions,
+    reportDate,
+    setReportDate: setReportDateAndSave,
     stations,
     activeStationId,
     hydrated,
@@ -957,6 +990,7 @@ export function useChecklist(
         setIdCounter,
         setStationName,
         setSectionDescriptions,
+        setReportDate,
       });
       if (activeStationId) {
         persistActive(next);

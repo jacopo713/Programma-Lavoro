@@ -21,7 +21,7 @@ import {
   SEVERITY_BANNER_FILL_RGB,
   SEVERITY_BANNER_TEXT_RGB,
 } from "@/lib/severity";
-import { formatCriticismNumber, pad } from "@/lib/format";
+import { formatCriticismNumber, formatReportDateIT, pad } from "@/lib/format";
 import { getAppLogoDataUrl } from "@/lib/pdf/pdfLogo";
 import { PDF_LAYOUT, PDF_THEME, PDF_TYPO } from "@/lib/pdf/pdfTheme";
 import { writeWithCriticityRed } from "@/lib/pdf/pdfText";
@@ -31,6 +31,8 @@ export interface ExportPdfOptions {
   items: Criticism[];
   stationName: string;
   operatorName: string;
+  /** Data di redazione scelta dall'utente (ISO YYYY-MM-DD, "" = non impostata) */
+  reportDate: string;
   sectionDescriptions: SectionDescriptions;
   inspectedSectionCount: number;
   inspectionSectionTotal: number;
@@ -71,6 +73,7 @@ export async function buildPdfBlob({
   items,
   stationName,
   operatorName,
+  reportDate,
   sectionDescriptions,
   inspectedSectionCount,
   inspectionSectionTotal,
@@ -103,12 +106,12 @@ export async function buildPdfBlob({
 
   const now = new Date();
   const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
-  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const reportDateStr = formatReportDateIT(reportDate) || dateStr;
 
   const metaRows: [string, string][] = [
-    ["Sede", stationName],
+    ["Sede/Luogo lavoro", stationName],
     ["Compilato da", operatorName || "—"],
-    ["Data rilevazione", `${dateStr} — ${timeStr}`],
+    ["Data redazione", reportDateStr],
   ];
 
   for (const [label, value] of metaRows) {

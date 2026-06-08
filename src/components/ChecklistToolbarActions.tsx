@@ -10,6 +10,7 @@ import { buildPdfBlob, getPdfFilename } from "@/lib/pdf/exportChecklistPdf";
 import { resolveCriticismsForPdf } from "@/lib/resolvePhotoForPdf";
 import { ChecklistOverview } from "./ChecklistOverview";
 import { PdfPreviewModal } from "./PdfPreviewModal";
+import { ReportDateControl } from "./ReportDateControl";
 import { StationSelectControl } from "./StationSelectControl";
 
 export function ChecklistToolbarActions() {
@@ -18,6 +19,8 @@ export function ChecklistToolbarActions() {
     items,
     stationName,
     sectionDescriptions,
+    reportDate,
+    setReportDate,
     stations,
     activeStationId,
     hydrated,
@@ -71,6 +74,7 @@ export function ChecklistToolbarActions() {
           items: itemsForPdf,
           stationName,
           operatorName: operatorDisplayName,
+          reportDate,
           sectionDescriptions,
           inspectedSectionCount,
           inspectionSectionTotal,
@@ -134,6 +138,11 @@ export function ChecklistToolbarActions() {
             stations={stations}
             activeStationId={activeStationId}
             onChange={handleStationChange}
+          />
+          <ReportDateControl
+            className="checklist-toolbar-date"
+            value={reportDate}
+            onChange={setReportDate}
           />
         </div>
         <ChecklistOverview />
