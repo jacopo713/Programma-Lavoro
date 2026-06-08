@@ -68,6 +68,32 @@ const PAGE_BOTTOM = L.pageBottom;
 const PAGE_TOP = L.pageTop;
 const BANNER_H = L.bannerHeightMm;
 const SUMMARY_PAD_MM = 6;
+/** Stima conservativa mm/carattere per Helvetica 9.5 pt bold (fallback se getTextWidth sottostima) */
+const META_LABEL_CHARS_PER_MM = 2.1;
+
+function measureMetaLabelWidthMm(doc: jsPDF, label: string): number {
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(T.summaryLabel);
+  const upper = label.toUpperCase();
+  return Math.max(
+    doc.getTextWidth(upper),
+    label.length * META_LABEL_CHARS_PER_MM,
+  );
+}
+
+function resolveMetaLabelColMm(
+  doc: jsPDF,
+  labels: string[],
+  usableWidthMm: number,
+): number {
+  const maxLabelWidth = Math.max(
+    ...labels.map((label) => measureMetaLabelWidthMm(doc, label)),
+  );
+  return Math.min(
+    usableWidthMm * 0.42,
+    Math.max(L.metaLabelColMm, maxLabelWidth + L.metaLabelValueGapMm),
+  );
+}
 
 export async function buildPdfBlob({
   items,
@@ -114,14 +140,10 @@ export async function buildPdfBlob({
     ["Data redazione", reportDateStr],
   ];
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(T.summaryLabel);
-  const metaLabelColMm = Math.min(
-    uW * 0.5,
-    Math.max(
-      L.metaLabelColMm,
-      ...metaRows.map(([label]) => doc.getTextWidth(label.toUpperCase()) + 4),
-    ),
+  const metaLabelColMm = resolveMetaLabelColMm(
+    doc,
+    metaRows.map(([label]) => label),
+    uW,
   );
 
   for (const [label, value] of metaRows) {
@@ -132,8 +154,13 @@ export async function buildPdfBlob({
     doc.setFont("helvetica", "normal");
     doc.setFontSize(T.meta);
     doc.setTextColor(...PDF_THEME.text);
-    const valueX = mL + metaLabelColMm;
-    const valueMaxW = uW - metaLabelColMm;
+    const labelWidth = measureMetaLabelWidthMm(doc, label);
+    const rowLabelColMm = Math.max(
+      metaLabelColMm,
+      labelWidth + L.metaLabelValueGapMm,
+    );
+    const valueX = mL + rowLabelColMm;
+    const valueMaxW = uW - rowLabelColMm;
     const valueLines = doc.splitTextToSize(value, valueMaxW) as string[];
     if (valueLines.length > 0) {
       doc.text(valueLines, valueX, y);

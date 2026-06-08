@@ -77,7 +77,9 @@ export const PDF_LAYOUT = {
   contentFooterGapMm: 8,
   /** Limite contenuto (sotto questa Y non si disegna corpo pagina) */
   pageBottom: 274,
-  metaLabelColMm: 34,
+  metaLabelColMm: 48,
+  /** Gap orizzontale tra fine etichetta metadato e inizio valore (mm) */
+  metaLabelValueGapMm: 8,
   /** Righe max nell'elenco compatto «Sintesi area» prima del dettaglio */
   sectionSummaryMaxLines: 8,
   logoSizeMm: 16,
