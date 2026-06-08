@@ -44,6 +44,14 @@ export async function signInWithGooglePopup(): Promise<void> {
   try {
     await signInWithPopup(auth, provider);
   } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      typeof (error as { code: unknown }).code === "string"
+    ) {
+      console.error("[auth] Google sign-in failed:", (error as { code: string }).code);
+    }
     throw new Error(firebaseAuthErrorMessage(error));
   }
 }

@@ -38,6 +38,40 @@ Opzionale: `NEXT_PUBLIC_LEGAL_CONTACT_EMAIL` — email mostrata nell'informativa
 
 Termini d'uso e informativa privacy: `/termini` e `/privacy`.
 
+### Deploy su Firebase App Hosting
+
+L'app è pubblicata su **Firebase App Hosting** (backend `programma-lavoro`, regione `europe-west4`).
+
+URL produzione: `https://programma-lavoro--programma-lavoro-8c0cd.europe-west4.hosted.app`
+
+#### Variabili d'ambiente (build time)
+
+Le variabili `NEXT_PUBLIC_FIREBASE_*` devono essere disponibili durante `next build`. Configurale in:
+
+- **Firebase Console** → App Hosting → backend → Settings → Environment, oppure
+- [`apphosting.yaml`](apphosting.yaml) (i valori in Console hanno precedenza)
+
+Dopo ogni modifica alle variabili, esegui un nuovo rollout/deploy del backend.
+
+#### Domini autorizzati per Google Sign-In
+
+Firebase Auth accetta login solo da domini in **Authentication → Settings → Authorized domains**.
+
+Oltre a `localhost`, aggiungi sempre il dominio App Hosting (senza `https://`):
+
+```
+programma-lavoro--programma-lavoro-8c0cd.europe-west4.hosted.app
+```
+
+Se aggiungi un dominio custom, includilo anch'esso. Senza questo passaggio, Google Sign-In funziona in locale ma fallisce in produzione con `auth/unauthorized-domain`.
+
+#### Checklist post-deploy
+
+1. Verificare tutte le `NEXT_PUBLIC_FIREBASE_*` nel rollout (tab Rollouts → dettaglio rollout)
+2. Verificare il dominio produzione negli Authorized domains
+3. Testare "Continua con Google" sull'URL live
+4. Se l'app OAuth è in modalità **Testing**, pubblicarla o aggiungere utenti tester in Google Cloud Console
+
 ### Deploy regole Firestore e Storage
 
 Dopo modifiche a `firebase.firestore.rules` o `firebase.storage.rules`:

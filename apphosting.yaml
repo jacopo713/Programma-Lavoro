@@ -1,0 +1,26 @@
+# Firebase App Hosting — https://firebase.google.com/docs/app-hosting/configure
+# I valori impostati nella Console Firebase hanno precedenza su questo file.
+#
+# Le variabili sensibili (API_KEY, APP_ID, ecc.) vanno configurate in:
+# Firebase Console → App Hosting → backend → Settings → Environment
+# oppure come secret: firebase apphosting:secrets:set NOME_SECRET
+
+runConfig:
+  minInstances: 0
+
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: programma-lavoro-8c0cd
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: programma-lavoro-8c0cd.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: programma-lavoro-8c0cd.firebasestorage.app
+    availability:
+      - BUILD
+      - RUNTIME

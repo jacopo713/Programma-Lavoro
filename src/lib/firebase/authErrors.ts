@@ -21,6 +21,18 @@ const AUTH_ERROR_MESSAGES_IT: Record<string, string> = {
     "Per sicurezza, conferma di nuovo la tua identità e riprova.",
   "auth/missing-email": "Inserisci l'indirizzo email.",
   "auth/invalid-login-credentials": "Email o password non corretti.",
+  "auth/unauthorized-domain":
+    "Dominio non autorizzato. Aggiungi questo sito in Firebase Console → Authentication → Authorized domains.",
+  "auth/popup-blocked":
+    "Il browser ha bloccato la finestra di accesso. Consenti i popup per questo sito e riprova.",
+  "auth/internal-error":
+    "Errore interno di autenticazione. Verifica la configurazione Firebase del deploy.",
+  "auth/api-key-not-valid.-invalid-api-key":
+    "Chiave API Firebase non valida. Controlla le variabili NEXT_PUBLIC_FIREBASE_* nel deploy.",
+  "auth/invalid-api-key":
+    "Chiave API Firebase non valida. Controlla le variabili NEXT_PUBLIC_FIREBASE_* nel deploy.",
+  "auth/access-denied":
+    "Accesso negato. Se l'app OAuth è in modalità test, aggiungi il tuo account come tester.",
 };
 
 export function firebaseAuthErrorMessage(error: unknown): string {
