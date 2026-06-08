@@ -58,7 +58,7 @@ export const INSPECTION_SECTIONS: readonly InspectionSectionDef[] = [
   {
     id: "trackAreas",
     number: "4",
-    title: "Aree tecniche e di transito",
+    title: "Spazi tra i binari",
     hint: "Segnala criticità in spazi di transito e aree di servizio.",
     descriptionPlaceholder:
       "Es. Materiale abbandonato in area transito; segnaletica di sicurezza mancante su varco tecnico.",

@@ -114,6 +114,16 @@ export async function buildPdfBlob({
     ["Data redazione", reportDateStr],
   ];
 
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(T.summaryLabel);
+  const metaLabelColMm = Math.min(
+    uW * 0.5,
+    Math.max(
+      L.metaLabelColMm,
+      ...metaRows.map(([label]) => doc.getTextWidth(label.toUpperCase()) + 4),
+    ),
+  );
+
   for (const [label, value] of metaRows) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(T.summaryLabel);
@@ -122,8 +132,13 @@ export async function buildPdfBlob({
     doc.setFont("helvetica", "normal");
     doc.setFontSize(T.meta);
     doc.setTextColor(...PDF_THEME.text);
-    doc.text(value, mL + L.metaLabelColMm, y);
-    y += L.lineMeta;
+    const valueX = mL + metaLabelColMm;
+    const valueMaxW = uW - metaLabelColMm;
+    const valueLines = doc.splitTextToSize(value, valueMaxW) as string[];
+    if (valueLines.length > 0) {
+      doc.text(valueLines, valueX, y);
+    }
+    y += L.lineMeta * Math.max(valueLines.length, 1);
   }
   y += L.gapLg;
 
