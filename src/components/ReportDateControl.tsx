@@ -7,6 +7,7 @@ import {
   getReportDateWindowBounds,
   isReportDateInWindow,
   parseIsoDate,
+  REPORT_DATE_WINDOW_DAYS,
   toIsoDate,
 } from "@/lib/format";
 
@@ -138,7 +139,6 @@ export function ReportDateControl({
   };
 
   const displayValue = value ? formatReportDateIT(value) : "Seleziona";
-  const rangeLabel = `${formatReportDateIT(toIsoDate(bounds.min))} — ${formatReportDateIT(toIsoDate(bounds.max))}`;
 
   return (
     <div
@@ -223,7 +223,7 @@ export function ReportDateControl({
                   key={isoDate}
                   type="button"
                   role="gridcell"
-                  className={`report-date-cell report-date-day${selectable ? " report-date-day--in-range" : " report-date-day--out-of-range"}${isSelected ? " report-date-day--selected" : ""}${isToday ? " report-date-day--today" : ""}`}
+                  className={`report-date-cell report-date-day${isSelected ? " report-date-day--selected" : ""}${isToday ? " report-date-day--today" : ""}`}
                   disabled={!selectable}
                   aria-label={formatReportDateIT(isoDate)}
                   aria-selected={isSelected}
@@ -236,7 +236,7 @@ export function ReportDateControl({
           </div>
 
           <p className="report-date-hint">
-            Periodo selezionabile: {rangeLabel}
+            Ultimi {REPORT_DATE_WINDOW_DAYS} giorni (incluso oggi)
           </p>
         </div>
       ) : null}
