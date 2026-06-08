@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
+import { MOBILE_NAV_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { compressImageFile } from "@/lib/compressImage";
 import {
   MAX_FILE_SIZE_BYTES,
@@ -20,6 +21,22 @@ interface UseImageFileInputOptions {
   showToast?: ImageFileInputToast;
 }
 
+function buildHiddenFileInputProps(
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+  options: { multiple?: boolean; capture?: "environment" | "user" },
+) {
+  return {
+    type: "file" as const,
+    accept: "image/*",
+    multiple: options.multiple || undefined,
+    capture: options.capture,
+    "aria-hidden": true as const,
+    tabIndex: -1,
+    className: "sr-only",
+    onChange,
+  };
+}
+
 export function useImageFileInput({
   onPhotoReady,
   onPhotosReady,
@@ -27,11 +44,32 @@ export function useImageFileInput({
   maxPhotos = MAX_PHOTOS_PER_UPLOAD,
   showToast,
 }: UseImageFileInputOptions) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useMediaQuery(MOBILE_NAV_QUERY);
+  const [chooserOpen, setChooserOpen] = useState(false);
+
+  const closeChooser = useCallback(() => {
+    setChooserOpen(false);
+  }, []);
+
+  const openGallery = useCallback(() => {
+    closeChooser();
+    galleryInputRef.current?.click();
+  }, [closeChooser]);
+
+  const openCamera = useCallback(() => {
+    closeChooser();
+    cameraInputRef.current?.click();
+  }, [closeChooser]);
 
   const openPicker = useCallback(() => {
-    inputRef.current?.click();
-  }, []);
+    if (isMobile) {
+      setChooserOpen(true);
+      return;
+    }
+    openGallery();
+  }, [isMobile, openGallery]);
 
   const processFile = useCallback(
     (file: File) => {
@@ -107,16 +145,30 @@ export function useImageFileInput({
     [multiple, processFile, processFiles],
   );
 
-  const inputProps = {
-    ref: inputRef,
-    type: "file" as const,
-    accept: "image/*",
-    multiple: multiple || undefined,
-    "aria-hidden": true as const,
-    tabIndex: -1,
-    className: "sr-only",
-    onChange: handleChange,
+  const galleryInputProps = {
+    ref: galleryInputRef,
+    ...buildHiddenFileInputProps(handleChange, { multiple }),
   };
 
-  return { inputRef, openPicker, processFile, processFiles, inputProps };
+  const cameraInputProps = {
+    ref: cameraInputRef,
+    ...buildHiddenFileInputProps(handleChange, { capture: "environment" }),
+  };
+
+  return {
+    galleryInputRef,
+    cameraInputRef,
+    openPicker,
+    openGallery,
+    openCamera,
+    processFile,
+    processFiles,
+    galleryInputProps,
+    cameraInputProps,
+    /** Alias retrocompatibile della galleria */
+    inputProps: galleryInputProps,
+    chooserOpen,
+    closeChooser,
+    showSourceChooser: isMobile,
+  };
 }

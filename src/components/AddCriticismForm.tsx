@@ -4,6 +4,7 @@ import { Check, Loader2, PenSquare, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppToast } from "@/contexts/ToastContext";
 import { useImageFileInput } from "@/hooks/useImageFileInput";
+import { PhotoSourceChooser } from "./PhotoSourceChooser";
 import { canSavePhotoEntry } from "@/lib/criticismDisplay";
 import { MAX_TITLE_LENGTH } from "@/lib/constants";
 import type { SeverityLevel } from "@/lib/types";
@@ -88,7 +89,16 @@ export function AddCriticismForm({
     setPhoto(dataUrl);
   }, []);
 
-  const { openPicker, inputProps } = useImageFileInput({
+  const {
+    openPicker,
+    openGallery,
+    openCamera,
+    galleryInputProps,
+    cameraInputProps,
+    chooserOpen,
+    closeChooser,
+    showSourceChooser,
+  } = useImageFileInput({
     onPhotoReady: handlePhotoReady,
     showToast,
   });
@@ -137,7 +147,16 @@ export function AddCriticismForm({
 
   return (
     <div id={formId} className={wrapperClassName}>
-      <input {...inputProps} />
+      <input {...galleryInputProps} />
+      <input {...cameraInputProps} />
+      {showSourceChooser ? (
+        <PhotoSourceChooser
+          open={chooserOpen}
+          onClose={closeChooser}
+          onCamera={openCamera}
+          onGallery={openGallery}
+        />
+      ) : null}
 
       <div className={innerClassName}>
         {!isInline && (

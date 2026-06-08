@@ -9,6 +9,7 @@ import type { InspectionSectionDef } from "@/lib/inspectionSections";
 import type { Criticism, SeverityLevel } from "@/lib/types";
 import type { CriticismFormInitial } from "./AddCriticismForm";
 import { CriticismList } from "./CriticismList";
+import { PhotoSourceChooser } from "./PhotoSourceChooser";
 import { SectionDescriptionField } from "./SectionDescriptionField";
 
 interface InspectionSectionProps {
@@ -58,7 +59,16 @@ export function InspectionSection({
   const titleId = `section-title-${section.id}`;
   const { showToast } = useAppToast();
 
-  const { openPicker, inputProps } = useImageFileInput({
+  const {
+    openPicker,
+    openGallery,
+    openCamera,
+    galleryInputProps,
+    cameraInputProps,
+    chooserOpen,
+    closeChooser,
+    showSourceChooser,
+  } = useImageFileInput({
     multiple: true,
     maxPhotos: MAX_PHOTOS_PER_UPLOAD,
     onPhotosReady: onStartAdd,
@@ -85,7 +95,16 @@ export function InspectionSection({
       aria-labelledby={titleId}
       data-section-id={section.id}
     >
-      <input {...inputProps} />
+      <input {...galleryInputProps} />
+      <input {...cameraInputProps} />
+      {showSourceChooser ? (
+        <PhotoSourceChooser
+          open={chooserOpen}
+          onClose={closeChooser}
+          onCamera={openCamera}
+          onGallery={openGallery}
+        />
+      ) : null}
 
       <header className="section-header">
         <div className="section-header-row">
