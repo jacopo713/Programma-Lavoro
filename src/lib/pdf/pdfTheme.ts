@@ -15,7 +15,8 @@ export const PDF_THEME = {
   cardPadMm: 5.5,
   cardGapMm: 2.5,
   cardRadiusMm: 3.5,
-  photoRadiusMm: 2.5,
+  /** 0 = angoli foto squadrati (nessun effetto card) */
+  photoRadiusMm: 0,
   bannerRadiusMm: 4,
 } as const;
 
@@ -46,6 +47,8 @@ export const PDF_LAYOUT = {
   gapSm: 3,
   gapMd: 4.5,
   gapLg: 6,
+  /** Separazione verticale tra una sezione e la successiva */
+  sectionGapMm: 9,
   bannerHeightMm: 7.5,
   bannerDotMm: 1.15,
   photoSideMm: 38,
@@ -53,10 +56,14 @@ export const PDF_LAYOUT = {
   photoColGapMm: 6,
   photoBlockGapMm: 3,
   /** Voci foto in dettaglio sezione: colonne da sinistra a destra */
-  photoEntryCols: 3,
-  photoEntryColGapMm: 4,
-  photoEntryRowGapMm: 2.5,
+  photoEntryCols: 2,
+  photoEntryColGapMm: 5,
+  photoEntryRowGapMm: 3.5,
   photoEntryInnerGapMm: 2,
+  /** Padding interno card voce foto (mm) */
+  photoEntryCardPadMm: 3,
+  /** Gap sopra/sotto la linea separatrice tra foto e titolo (mm) */
+  photoEntrySepGapMm: 3,
   /** Spazio tra bordo inferiore foto e titolo (baseline jsPDF) */
   photoEntryTitleGapMm: 5,
   photoEntryTitleLineMm: 5.2,
@@ -70,7 +77,7 @@ export const PDF_LAYOUT = {
   contentFooterGapMm: 8,
   /** Limite contenuto (sotto questa Y non si disegna corpo pagina) */
   pageBottom: 274,
-  metaLabelColMm: 42,
+  metaLabelColMm: 34,
   /** Righe max nell'elenco compatto «Sintesi area» prima del dettaglio */
   sectionSummaryMaxLines: 8,
   logoSizeMm: 16,

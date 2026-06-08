@@ -1,11 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { canSavePhotoEntry, isDataUrlPhoto, isRemotePhoto } from "@/lib/criticismDisplay";
+import {
+  canSavePhotoEntry,
+  hasValidPhoto,
+  isDataUrlPhoto,
+  isRemotePhoto,
+} from "@/lib/criticismDisplay";
 import { DEFAULT_STATION_NAME, MAX_STATION_NAME_LENGTH } from "@/lib/constants";
 import { formatDateTimeIT } from "@/lib/format";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import {
+  deleteAllCriticismPhotos,
   deleteCriticismPhoto,
   deleteStationPhotos,
   uploadCriticismPhoto,
@@ -26,6 +32,7 @@ import {
   type SectionDescriptions,
 } from "@/lib/sectionDescriptions";
 import { isSectionIncludedInReport } from "@/lib/sectionReport";
+import { DEFAULT_SEVERITY } from "@/lib/severity";
 import {
   createStationRecord,
   saveRegistrySafe,
@@ -72,7 +79,8 @@ async function resolvePhotoForSave(
   stationId: string,
   criticismId: number,
   photo: string,
-  previousPhoto?: string,
+  previousPhoto: string | undefined,
+  photoIndex: number,
 ): Promise<string> {
   if (isRemotePhoto(photo) && photo === previousPhoto) {
     return photo;
@@ -81,16 +89,23 @@ async function resolvePhotoForSave(
   if (isDataUrlPhoto(photo)) {
     if (previousPhoto && isRemotePhoto(previousPhoto)) {
       try {
-        await deleteCriticismPhoto(uid, stationId, criticismId);
+        await deleteCriticismPhoto(uid, stationId, criticismId, photoIndex);
       } catch {
         /* sostituzione: procedi con upload */
       }
     }
-    return uploadCriticismPhoto(uid, stationId, criticismId, photo);
+    return uploadCriticismPhoto(
+      uid,
+      stationId,
+      criticismId,
+      photo,
+      photoIndex,
+    );
   }
 
   return photo;
 }
+
 
 export function useChecklist(
   uid: string | null,
@@ -647,6 +662,65 @@ export function useChecklist(
     [items],
   );
 
+  const addCriticisms = useCallback(
+    async (
+      sectionId: SectionId,
+      photos: string[],
+      severity: SeverityLevel = DEFAULT_SEVERITY,
+    ): Promise<Criticism[]> => {
+      if (photos.length === 0) return [];
+
+      const currentUid = getCurrentUserId();
+      if (!currentUid || !activeStationId) return [];
+
+      let nextItems = [...items];
+      let nextIdCounter = idCounter;
+      const created: Criticism[] = [];
+
+      for (const photo of photos) {
+        if (!hasValidPhoto(photo)) continue;
+
+        const newId = nextIdCounter + 1;
+        try {
+          const remotePhoto = await resolvePhotoForSave(
+            currentUid,
+            activeStationId,
+            newId,
+            photo,
+            undefined,
+            0,
+          );
+          const item: Criticism = {
+            id: newId,
+            sectionId,
+            title: "",
+            time: formatDateTimeIT(new Date()),
+            photos: [remotePhoto],
+            severity,
+            resolved: false,
+          };
+          created.push(item);
+          nextItems.push(item);
+          nextIdCounter = newId;
+        } catch {
+          /* salta la foto non caricata */
+        }
+      }
+
+      if (created.length === 0) return [];
+
+      try {
+        persistActive(snapshot(nextItems, nextIdCounter));
+        setItems(nextItems);
+        setIdCounter(nextIdCounter);
+        return created;
+      } catch {
+        return [];
+      }
+    },
+    [items, idCounter, activeStationId, persistActive, snapshot],
+  );
+
   const addCriticism = useCallback(
     async (
       sectionId: SectionId,
@@ -654,7 +728,7 @@ export function useChecklist(
       photo: string,
       severity: SeverityLevel,
     ): Promise<Criticism | null> => {
-      if (!canSavePhotoEntry(title, photo)) return null;
+      if (!hasValidPhoto(photo)) return null;
 
       const currentUid = getCurrentUserId();
       if (!currentUid || !activeStationId) return null;
@@ -668,6 +742,8 @@ export function useChecklist(
           activeStationId,
           newId,
           photo,
+          undefined,
+          0,
         );
       } catch {
         return null;
@@ -705,11 +781,10 @@ export function useChecklist(
       if (
         currentUid &&
         activeStationId &&
-        existing?.photos[0] &&
-        isRemotePhoto(existing.photos[0])
+        existing?.photos.some((photo) => isRemotePhoto(photo))
       ) {
         try {
-          await deleteCriticismPhoto(currentUid, activeStationId, id);
+          await deleteAllCriticismPhotos(currentUid, activeStationId, id);
         } catch {
           /* rimuovi comunque dal checklist */
         }
@@ -751,6 +826,7 @@ export function useChecklist(
           id,
           photo,
           existing.photos[0],
+          0,
         );
       } catch {
         return false;
@@ -799,6 +875,43 @@ export function useChecklist(
     [items, idCounter, persistActive, snapshot],
   );
 
+  const moveCriticismInSection = useCallback(
+    (sectionId: SectionId, id: number, direction: -1 | 1): boolean => {
+      const sectionItems = items.filter((item) => item.sectionId === sectionId);
+      const idx = sectionItems.findIndex((item) => item.id === id);
+      if (idx === -1) return false;
+
+      const targetIdx = idx + direction;
+      if (targetIdx < 0 || targetIdx >= sectionItems.length) return false;
+
+      const reorderedSection = [...sectionItems];
+      [reorderedSection[idx], reorderedSection[targetIdx]] = [
+        reorderedSection[targetIdx],
+        reorderedSection[idx],
+      ];
+
+      const nextItems: Criticism[] = [];
+      for (const section of INSPECTION_SECTIONS) {
+        if (section.id === sectionId) {
+          nextItems.push(...reorderedSection);
+        } else {
+          nextItems.push(
+            ...items.filter((item) => item.sectionId === section.id),
+          );
+        }
+      }
+
+      try {
+        persistActive(snapshot(nextItems, idCounter));
+        setItems(nextItems);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [items, idCounter, persistActive, snapshot],
+  );
+
   return {
     items,
     stationName,
@@ -818,9 +931,11 @@ export function useChecklist(
     setSectionDescription: setSectionDescriptionAndSave,
     reloadActiveChecklist,
     addCriticism,
+    addCriticisms,
     updateCriticism,
     deleteCriticism,
     setCriticismResolved,
+    moveCriticismInSection,
     getItemsForSection,
     countForSection,
     totalCount,

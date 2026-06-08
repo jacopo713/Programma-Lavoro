@@ -26,6 +26,8 @@ export function checklistStorageKey(stationId: string): string {
 }
 
 export const MAX_PHOTOS_PER_CRITICISM = 1;
+/** Massimo foto selezionabili in un unico caricamento */
+export const MAX_PHOTOS_PER_UPLOAD = 20;
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 export const MAX_TITLE_LENGTH = 120;
 export const MAX_SECTION_DESCRIPTION_LENGTH = 4000;

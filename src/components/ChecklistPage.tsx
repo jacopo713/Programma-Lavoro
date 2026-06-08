@@ -35,10 +35,11 @@ export function ChecklistPage() {
     activeStationId,
     hydrated,
     setSectionDescription,
-    addCriticism,
+    addCriticisms,
     updateCriticism,
     deleteCriticism,
     setCriticismResolved,
+    moveCriticismInSection,
     focusSessionId,
     setFocusSessionId,
   } = useChecklistContext();
@@ -68,18 +69,10 @@ export function ChecklistPage() {
     [getVisibleItemsForSection],
   );
 
-  const [formOpen, setFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState<"add" | "edit">("add");
-  const [activeSectionId, setActiveSectionId] = useState<SectionId>("building");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formSession, setFormSession] = useState(0);
-  const [addFormInitial, setAddFormInitial] = useState<
-    CriticismFormInitial | undefined
-  >();
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [savingPhoto, setSavingPhoto] = useState(false);
-  const scrollAfterOpenRef = useRef<SectionId | null>(null);
-  /** Scroll verticale prima di aprire modifica inline — ripristinato alla chiusura */
   const editScrollYRef = useRef<number | null>(null);
 
   const editFormInitial = useMemo((): CriticismFormInitial | undefined => {
@@ -96,9 +89,6 @@ export function ChecklistPage() {
       severity: item.severity,
     };
   }, [editingId, items, visibleItems]);
-
-  const formInitial =
-    formMode === "edit" ? editFormInitial : addFormInitial;
 
   useEffect(() => {
     if (!hydrated || urlFocusId === null) return;
@@ -151,18 +141,6 @@ export function ChecklistPage() {
     }
   }, [activeStationId, focusSessionId, hydrated, items, router, showToast]);
 
-  useEffect(() => {
-    const sectionId = scrollAfterOpenRef.current;
-    if (!sectionId || !formOpen || formMode !== "add") return;
-    scrollAfterOpenRef.current = null;
-    requestAnimationFrame(() => {
-      const el = document.querySelector(
-        `[data-section-id="${sectionId}"]`,
-      );
-      el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }, [formOpen, formMode, formSession]);
-
   const restoreEditScroll = useCallback(() => {
     const y = editScrollYRef.current;
     if (y === null) return;
@@ -175,41 +153,17 @@ export function ChecklistPage() {
   }, []);
 
   const closeForm = useCallback(() => {
-    const shouldRestoreScroll =
-      formMode === "edit" && editScrollYRef.current !== null;
-    setFormOpen(false);
+    const shouldRestoreScroll = editScrollYRef.current !== null;
     setEditingId(null);
-    setFormMode("add");
-    setAddFormInitial(undefined);
     if (shouldRestoreScroll) restoreEditScroll();
-  }, [formMode, restoreEditScroll]);
-
-  const openAddWithPhoto = useCallback(
-    (sectionId: SectionId, photo: string) => {
-      setActiveSectionId(sectionId);
-      setEditingId(null);
-      setFormMode("add");
-      setAddFormInitial({
-        title: "",
-        photo,
-        severity: DEFAULT_SEVERITY,
-      });
-      setFormSession((s) => s + 1);
-      scrollAfterOpenRef.current = sectionId;
-      setFormOpen(true);
-    },
-    [],
-  );
+  }, [restoreEditScroll]);
 
   const openEdit = (id: number) => {
     const item = items.find((i) => i.id === id);
     if (!item) return;
     editScrollYRef.current = window.scrollY;
-    setActiveSectionId(item.sectionId);
     setEditingId(id);
-    setFormMode("edit");
     setFormSession((s) => s + 1);
-    setFormOpen(true);
   };
 
   const handleSave = async (
@@ -221,25 +175,14 @@ export function ChecklistPage() {
       showToast("Accedi per allegare foto", "warning");
       return;
     }
-    if (savingPhoto) return;
+    if (savingPhoto || editingId === null) return;
 
     setSavingPhoto(true);
     try {
-      if (formMode === "edit" && editingId !== null) {
-        const ok = await updateCriticism(editingId, title, photo, severity);
-        if (ok) {
-          closeForm();
-          showToast("Foto aggiornata", "success");
-        } else {
-          showToast("Errore caricamento foto", "warning");
-        }
-        return;
-      }
-
-      const result = await addCriticism(activeSectionId, title, photo, severity);
-      if (result) {
+      const ok = await updateCriticism(editingId, title, photo, severity);
+      if (ok) {
         closeForm();
-        showToast("Foto aggiunta", "success");
+        showToast("Foto aggiornata", "success");
       } else {
         showToast("Errore caricamento foto", "warning");
       }
@@ -269,15 +212,46 @@ export function ChecklistPage() {
     }
   };
 
+  const handleMoveCriticism = (
+    sectionId: SectionId,
+    id: number,
+    direction: -1 | 1,
+  ) => {
+    if (!moveCriticismInSection(sectionId, id, direction)) {
+      showToast("Impossibile riordinare la foto", "warning");
+    }
+  };
+
   const handleStartAdd = useCallback(
-    (sectionId: SectionId, photo: string) => {
+    async (sectionId: SectionId, photos: string[]) => {
       if (!canManagePhotos) {
         showToast("Accedi per allegare foto", "warning");
         return;
       }
-      openAddWithPhoto(sectionId, photo);
+      if (photos.length === 0 || savingPhoto) return;
+
+      setSavingPhoto(true);
+      try {
+        const created = await addCriticisms(
+          sectionId,
+          photos,
+          DEFAULT_SEVERITY,
+        );
+        if (created.length > 0) {
+          showToast(
+            created.length > 1
+              ? `${created.length} foto aggiunte`
+              : "Foto aggiunta",
+            "success",
+          );
+        } else {
+          showToast("Errore caricamento foto", "warning");
+        }
+      } finally {
+        setSavingPhoto(false);
+      }
     },
-    [canManagePhotos, openAddWithPhoto, showToast],
+    [addCriticisms, canManagePhotos, savingPhoto, showToast],
   );
 
   if (!hydrated) {
@@ -302,20 +276,20 @@ export function ChecklistPage() {
               onSectionDescriptionSave={(value) => {
                 setSectionDescription(section.id, value);
               }}
-              formOpen={formOpen}
-              isActiveFormSection={activeSectionId === section.id}
-              formMode={formMode}
-              formSession={formSession}
               editingId={editingId}
+              formSession={formSession}
               focusedId={focusedCriticismId}
-              formInitial={formInitial}
+              formInitial={editFormInitial}
               canManagePhotos={canManagePhotos}
               savingPhoto={savingPhoto}
-              onStartAdd={(photo) => handleStartAdd(section.id, photo)}
+              onStartAdd={(photos) => void handleStartAdd(section.id, photos)}
               onEdit={openEdit}
               onDelete={handleDelete}
               onToggleResolved={handleToggleResolved}
               onPhotoClick={setLightboxSrc}
+              onMove={(id, direction) =>
+                handleMoveCriticism(section.id, id, direction)
+              }
               onFormCancel={closeForm}
               onFormSave={handleSave}
             />

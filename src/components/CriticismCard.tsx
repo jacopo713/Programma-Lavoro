@@ -1,6 +1,13 @@
 "use client";
 
-import { CheckCircle2, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { getPhotoDataUrl } from "@/lib/criticismDisplay";
 import { getCriticismDomId } from "@/lib/criticismNavigation";
 import type { Criticism } from "@/lib/types";
@@ -8,22 +15,32 @@ import { SeverityLabelBanner } from "./SeverityLabelBanner";
 
 interface CriticismCardProps {
   item: Criticism;
+  index: number;
+  totalInSection: number;
+  canReorder?: boolean;
   focused?: boolean;
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
   onToggleResolved: (id: number, resolved: boolean) => void;
   onPhotoClick: (src: string) => void;
+  onMove?: (id: number, direction: -1 | 1) => void;
 }
 
 export function CriticismCard({
   item,
+  index,
+  totalInSection,
+  canReorder = false,
   focused = false,
   onEdit,
   onDelete,
   onToggleResolved,
   onPhotoClick,
+  onMove,
 }: CriticismCardProps) {
   const photo = getPhotoDataUrl(item.photos);
+  const canMoveBack = index > 0;
+  const canMoveForward = index < totalInSection - 1;
 
   return (
     <div
@@ -81,7 +98,33 @@ export function CriticismCard({
           <p className="crit-card-missing-photo">Foto non disponibile</p>
         )}
 
-        <p className="crit-card-photo-title">{item.title}</p>
+        {item.title.trim() ? (
+          <p className="crit-card-photo-title">{item.title}</p>
+        ) : null}
+        {canReorder && onMove ? (
+          <div className="crit-card-reorder">
+            <button
+              type="button"
+              className="btn-icon btn-icon--reorder"
+              title="Sposta indietro"
+              aria-label="Sposta indietro"
+              disabled={!canMoveBack}
+              onClick={() => onMove(item.id, -1)}
+            >
+              <ChevronLeft size={14} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className="btn-icon btn-icon--reorder"
+              title="Sposta avanti"
+              aria-label="Sposta avanti"
+              disabled={!canMoveForward}
+              onClick={() => onMove(item.id, 1)}
+            >
+              <ChevronRight size={14} aria-hidden />
+            </button>
+          </div>
+        ) : null}
         <SeverityLabelBanner level={item.severity} />
       </div>
     </div>

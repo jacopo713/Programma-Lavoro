@@ -2,6 +2,7 @@
  * Firebase Storage — criticità foto
  *
  * Path: users/{uid}/stations/{stationId}/criticisms/{criticismId}.jpg
+ *       users/{uid}/stations/{stationId}/criticisms/{criticismId}_{index}.jpg (index > 0)
  *
  * Regole da applicare in Firebase Console → Storage → Rules:
  *
@@ -27,10 +28,20 @@ import { isDataUrlPhoto } from "@/lib/criticismDisplay";
 import { getFirebaseStorage } from "./client";
 import { firebaseStorageErrorMessage } from "./storageErrors";
 
+export function criticismPhotoFileName(
+  criticismId: number,
+  photoIndex = 0,
+): string {
+  return photoIndex === 0
+    ? `${criticismId}.jpg`
+    : `${criticismId}_${photoIndex}.jpg`;
+}
+
 function criticismPhotoRef(
   uid: string,
   stationId: string,
   criticismId: number,
+  photoIndex = 0,
 ) {
   const storage = getFirebaseStorage();
   if (!storage) {
@@ -38,7 +49,7 @@ function criticismPhotoRef(
   }
   return ref(
     storage,
-    `users/${uid}/stations/${stationId}/criticisms/${criticismId}.jpg`,
+    `users/${uid}/stations/${stationId}/criticisms/${criticismPhotoFileName(criticismId, photoIndex)}`,
   );
 }
 
@@ -50,11 +61,19 @@ function stationPhotosPrefixRef(uid: string, stationId: string) {
   return ref(storage, `users/${uid}/stations/${stationId}/criticisms`);
 }
 
+function isCriticismPhotoFile(fileName: string, criticismId: number): boolean {
+  return (
+    fileName === criticismPhotoFileName(criticismId, 0) ||
+    fileName.startsWith(`${criticismId}_`)
+  );
+}
+
 export async function uploadCriticismPhoto(
   uid: string,
   stationId: string,
   criticismId: number,
   photo: string,
+  photoIndex = 0,
 ): Promise<string> {
   if (!isDataUrlPhoto(photo)) {
     return photo;
@@ -62,7 +81,7 @@ export async function uploadCriticismPhoto(
 
   try {
     const blob = dataUrlToBlob(photo);
-    const fileRef = criticismPhotoRef(uid, stationId, criticismId);
+    const fileRef = criticismPhotoRef(uid, stationId, criticismId, photoIndex);
     await uploadBytes(fileRef, blob, { contentType: "image/jpeg" });
     return await getDownloadURL(fileRef);
   } catch (error) {
@@ -74,9 +93,45 @@ export async function deleteCriticismPhoto(
   uid: string,
   stationId: string,
   criticismId: number,
+  photoIndex = 0,
 ): Promise<void> {
   try {
-    await deleteObject(criticismPhotoRef(uid, stationId, criticismId));
+    await deleteObject(
+      criticismPhotoRef(uid, stationId, criticismId, photoIndex),
+    );
+  } catch (error) {
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code: string }).code)
+        : "";
+    if (code === "storage/object-not-found") return;
+    throw new Error(firebaseStorageErrorMessage(error));
+  }
+}
+
+export async function deleteAllCriticismPhotos(
+  uid: string,
+  stationId: string,
+  criticismId: number,
+): Promise<void> {
+  try {
+    const folderRef = stationPhotosPrefixRef(uid, stationId);
+    const listing = await listAll(folderRef);
+    const toDelete = listing.items.filter((itemRef) =>
+      isCriticismPhotoFile(itemRef.name, criticismId),
+    );
+    await Promise.all(
+      toDelete.map((itemRef) =>
+        deleteObject(itemRef).catch((error) => {
+          const code =
+            error && typeof error === "object" && "code" in error
+              ? String((error as { code: string }).code)
+              : "";
+          if (code === "storage/object-not-found") return;
+          throw error;
+        }),
+      ),
+    );
   } catch (error) {
     const code =
       error && typeof error === "object" && "code" in error

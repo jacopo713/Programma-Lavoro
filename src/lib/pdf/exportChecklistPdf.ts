@@ -13,7 +13,6 @@ import {
 import { isSectionIncludedInReport } from "@/lib/sectionReport";
 import {
   getSeverityBannerLabel,
-  getSeverityLabel,
   getSeverityReportBannerLabel,
   normalizeSeverity,
   SEVERITY_OPTIONS,
@@ -24,17 +23,8 @@ import {
 } from "@/lib/severity";
 import { formatCriticismNumber, pad } from "@/lib/format";
 import { getAppLogoDataUrl } from "@/lib/pdf/pdfLogo";
-import {
-  PDF_LAYOUT,
-  PDF_THEME,
-  PDF_TYPO,
-  PHOTO_ROW_STRIDE_MM,
-} from "@/lib/pdf/pdfTheme";
-import {
-  writeWithCriticityRed,
-  writeWithCriticityRedLight,
-  writeWithCriticityRedMuted,
-} from "@/lib/pdf/pdfText";
+import { PDF_LAYOUT, PDF_THEME, PDF_TYPO } from "@/lib/pdf/pdfTheme";
+import { writeWithCriticityRed } from "@/lib/pdf/pdfText";
 import type { Criticism, SeverityLevel } from "@/lib/types";
 
 export interface ExportPdfOptions {
@@ -74,14 +64,8 @@ const L = PDF_LAYOUT;
 const T = PDF_TYPO;
 const PAGE_BOTTOM = L.pageBottom;
 const PAGE_TOP = L.pageTop;
-const PHOTO_SIDE_MM = L.photoSideMm;
-const PHOTO_COL_GAP_MM = L.photoColGapMm;
-const PHOTO_ROW_STRIDE = PHOTO_ROW_STRIDE_MM;
-const CARD_PAD = PDF_THEME.cardPadMm;
-const CARD_GAP = PDF_THEME.cardGapMm;
-const CARD_R = PDF_THEME.cardRadiusMm;
 const BANNER_H = L.bannerHeightMm;
-const SUMMARY_PAD_MM = 5;
+const SUMMARY_PAD_MM = 6;
 
 export async function buildPdfBlob({
   items,
@@ -100,11 +84,12 @@ export async function buildPdfBlob({
   const uW = pageW - mL - mR;
   let y = 0;
 
-  function need(h: number) {
-    if (y + h >= PAGE_BOTTOM) {
+  function need(cursorY: number, h: number): number {
+    if (cursorY + h >= PAGE_BOTTOM) {
       doc.addPage();
-      y = PAGE_TOP;
+      return PAGE_TOP;
     }
+    return cursorY;
   }
 
   doc.setFillColor(...PDF_THEME.brand);
@@ -112,15 +97,14 @@ export async function buildPdfBlob({
   y = drawPdfHeader(doc, logoDataUrl, mL, mR, pageW, uW);
 
   doc.setDrawColor(...PDF_THEME.borderLight);
-  doc.setLineWidth(0.25);
+  doc.setLineWidth(0.2);
   doc.line(mL, y, pageW - mR, y);
-  y += L.gapMd;
+  y += L.gapLg;
 
   const now = new Date();
   const dateStr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
   const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
-  doc.setFontSize(T.meta);
   const metaRows: [string, string][] = [
     ["Sede", stationName],
     ["Compilato da", operatorName || "—"],
@@ -129,14 +113,16 @@ export async function buildPdfBlob({
 
   for (const [label, value] of metaRows) {
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...PDF_THEME.textSecondary);
-    doc.text(label, mL, y);
+    doc.setFontSize(T.summaryLabel);
+    doc.setTextColor(...PDF_THEME.textMuted);
+    doc.text(label.toUpperCase(), mL, y);
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(T.meta);
     doc.setTextColor(...PDF_THEME.text);
     doc.text(value, mL + L.metaLabelColMm, y);
     y += L.lineMeta;
   }
-  y += L.gapMd;
+  y += L.gapLg;
 
   y = drawLegacyKpi(
     doc,
@@ -199,7 +185,8 @@ function drawPdfHeader(
     console.warn("Logo PDF non caricato:", err);
   }
 
-  const titleY = y0 + logoSize * 0.42;
+  const subtitleGap = 5.4;
+  const titleY = y0 + logoSize / 2 - 0.6;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(T.reportTitle);
   doc.setTextColor(...PDF_THEME.text);
@@ -211,8 +198,8 @@ function drawPdfHeader(
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(T.reportSubtitle);
-  doc.setTextColor(...PDF_THEME.textMuted);
-  doc.text("Checklist — report PDF", textX, titleY + 6);
+  doc.setTextColor(...PDF_THEME.textSecondary);
+  doc.text("Checklist — report PDF", textX, titleY + subtitleGap);
 
   return y0 + logoSize + L.logoGapAfterMm;
 }
@@ -286,13 +273,12 @@ function drawLegacyKpi(
   photoCount: number,
   mL: number,
   uW: number,
-  pageW: number,
-  mR: number,
+  _pageW: number,
+  _mR: number,
   startY: number,
-  need: (h: number) => void,
+  need: (cursorY: number, h: number) => number,
 ): number {
-  need(22);
-  let y = startY + L.gapSm;
+  const y = need(startY, 22) + L.gapSm;
   const colW = uW / 3;
   const kpiRows: [string, string][] = [
     ["Aree ispezionate", `${inspected} / ${totalSections}`],
@@ -300,25 +286,22 @@ function drawLegacyKpi(
     ["Foto allegate", String(photoCount)],
   ];
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(T.summaryLabel);
-  doc.setTextColor(...PDF_THEME.textSecondary);
+  const valueY = y + 7.5;
 
   kpiRows.forEach(([label, value], i) => {
     const x = mL + i * colW;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(T.summaryTable);
+    doc.setTextColor(...PDF_THEME.textMuted);
     doc.text(label.toUpperCase(), x, y);
-    doc.setFontSize(T.summaryHeading);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(T.sectionTitle);
     doc.setTextColor(...PDF_THEME.brand);
-    doc.text(value, x, y + 5);
-    doc.setFontSize(T.summaryLabel);
-    doc.setTextColor(...PDF_THEME.textSecondary);
+    doc.text(value, x, valueY);
   });
 
-  y += 12;
-  doc.setDrawColor(...PDF_THEME.borderLight);
-  doc.setLineWidth(0.25);
-  doc.line(mL, y, pageW - mR, y);
-  return y + L.gapMd;
+  return valueY + L.gapLg;
 }
 
 function drawInspectionDetail(
@@ -330,10 +313,26 @@ function drawInspectionDetail(
   uW: number,
   pageW: number,
   startY: number,
-  need: (h: number) => void,
+  need: (cursorY: number, h: number) => number,
 ): number {
   let y = startY;
-  need(10);
+
+  const includedSections = INSPECTION_SECTIONS.filter((section) =>
+    isSectionIncludedInReport(section.id, items, sectionDescriptions),
+  );
+
+  const detailHeaderBlock = L.gapSm + L.lineTitle + L.gapMd;
+  const firstSection = includedSections[0];
+  const firstSectionMin = firstSection
+    ? measureSectionChapterMinHeight(
+        doc,
+        getSectionDescription(sectionDescriptions, firstSection.id),
+        getSectionItems(items, firstSection.id),
+        uW,
+      )
+    : 0;
+  y = need(y, detailHeaderBlock + firstSectionMin);
+
   y += L.gapSm;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(T.sectionTitle);
@@ -341,10 +340,7 @@ function drawInspectionDetail(
   doc.text("DETTAGLIO ISPEZIONI ED EVIDENZE", mL, y);
   y += L.gapMd;
 
-  for (const section of INSPECTION_SECTIONS) {
-    if (!isSectionIncludedInReport(section.id, items, sectionDescriptions)) {
-      continue;
-    }
+  includedSections.forEach((section, idx) => {
     y = drawSectionChapter(
       doc,
       section,
@@ -356,8 +352,9 @@ function drawInspectionDetail(
       pageW,
       y,
       need,
+      idx === 0,
     );
-  }
+  });
 
   return y;
 }
@@ -404,14 +401,30 @@ function drawSectionChapter(
   uW: number,
   pageW: number,
   startY: number,
-  need: (h: number) => void,
+  need: (cursorY: number, h: number) => number,
+  isFirst: boolean,
 ): number {
   const sectionItems = getSectionItems(allItems, section.id);
   const narrative = getSectionDescription(sectionDescriptions, section.id);
 
-  need(measureSectionChapterMinHeight(doc, narrative, sectionItems, uW));
+  const minHeight = measureSectionChapterMinHeight(
+    doc,
+    narrative,
+    sectionItems,
+    uW,
+  );
+  const leadGap = isFirst ? 0 : L.sectionGapMm;
+  const brokenY = need(startY, leadGap + minHeight);
+  const samePage = brokenY === startY;
 
-  let y = startY;
+  let y = brokenY;
+  if (samePage && !isFirst) {
+    y += L.sectionGapMm;
+    doc.setDrawColor(...PDF_THEME.border);
+    doc.setLineWidth(0.25);
+    doc.line(mL, y, pageW - mR, y);
+  }
+
   y += L.gapMd;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(T.sectionTitle);
@@ -433,7 +446,7 @@ function drawSectionChapter(
   y += L.gapMd;
 
   if (narrative) {
-    need(measureSectionNarrativeHeight(doc, narrative, uW));
+    y = need(y, measureSectionNarrativeHeight(doc, narrative, uW));
     y = drawSectionNarrative(doc, narrative, mL, uW, y);
   } else if (sectionItems.length > 0) {
     y += L.gapSm;
@@ -486,7 +499,7 @@ function drawExecutiveSummary(
   uW: number,
   _pageW: number,
   startY: number,
-  need: (h: number) => void,
+  need: (cursorY: number, h: number) => number,
 ): number {
   const items = numberedItems.map((n) => n.item);
   const stats = computeSummaryStats(items);
@@ -496,13 +509,11 @@ function drawExecutiveSummary(
   const pillStartX = mL + innerPad;
   const pillMaxX = mL + uW - innerPad;
 
-  need(boxH + 4);
-
-  const y = startY;
+  const y = need(startY, boxH + 4);
   doc.setFillColor(...PDF_THEME.summaryBg);
-  doc.setDrawColor(...PDF_THEME.border);
-  doc.setLineWidth(0.25);
-  doc.roundedRect(mL, y, uW, boxH, 1.5, 1.5, "FD");
+  doc.setDrawColor(...PDF_THEME.borderLight);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(mL, y, uW, boxH, 2.5, 2.5, "FD");
 
   let innerY = y + innerPad;
 
@@ -556,46 +567,18 @@ function drawExecutiveSummary(
   return y + boxH + 6;
 }
 
-function countPhotoRows(
-  photoCount: number,
-  startX: number,
-  maxX: number,
-): number {
-  if (photoCount === 0) return 0;
-  const slotW = PHOTO_SIDE_MM + PHOTO_COL_GAP_MM;
-  const perRow = Math.max(
-    1,
-    Math.floor((maxX - startX + PHOTO_COL_GAP_MM) / slotW),
-  );
-  return Math.ceil(photoCount / perRow);
-}
-
-function measurePhotosBlockHeight(
-  photoCount: number,
-  startX: number,
-  maxX: number,
-): number {
-  const rows = countPhotoRows(photoCount, startX, maxX);
-  if (rows === 0) return 0;
-  return rows * PHOTO_ROW_STRIDE;
-}
-
 function measureBannerWidth(doc: jsPDF, label: string): number {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(T.banner);
   return 3 + L.bannerDotMm * 2 + 2 + doc.getTextWidth(label) + 4;
 }
 
-/** Spazio per riga etichetta campo (es. «Descrizione:») */
-function measureFieldLabelBlock(): number {
-  return L.gapMd + L.lineBody + L.gapMd;
-}
-
 const PHOTO_ENTRY_COLS = L.photoEntryCols;
-const PHOTO_ENTRY_MIN_SIZE_MM = 32;
 const PHOTO_ENTRY_COL_GAP = L.photoEntryColGapMm;
 const PHOTO_ENTRY_ROW_GAP = L.photoEntryRowGapMm;
 const PHOTO_ENTRY_INNER_GAP = L.photoEntryInnerGapMm;
+const PHOTO_ENTRY_CARD_PAD = L.photoEntryCardPadMm;
+const PHOTO_ENTRY_SEP_GAP = L.photoEntrySepGapMm;
 
 function photoEntryCellWidth(contentWidthMm: number): number {
   return (
@@ -604,25 +587,39 @@ function photoEntryCellWidth(contentWidthMm: number): number {
   );
 }
 
+function photoEntryInnerWidth(cellW: number): number {
+  return cellW - PHOTO_ENTRY_CARD_PAD * 2;
+}
+
+function measurePhotoEntryTitleLines(
+  doc: jsPDF,
+  title: string,
+  innerW: number,
+): string[] {
+  if (!title.trim()) return [];
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(L.photoEntryTitleFontPt);
+  return doc.splitTextToSize(title, innerW) as string[];
+}
+
 function measurePhotoEntryCellHeight(
   doc: jsPDF,
   item: Criticism,
   cellW: number,
-  photoSize: number = cellW,
+  photoSize: number = photoEntryInnerWidth(cellW),
 ): number {
-  let h = photoSize;
-  if (photoSize > 0) {
-    h += L.photoEntryTitleGapMm;
+  const innerW = photoEntryInnerWidth(cellW);
+  let h = PHOTO_ENTRY_CARD_PAD;
+  h += photoSize;
+
+  const titleLines = measurePhotoEntryTitleLines(doc, item.title, innerW);
+  if (titleLines.length > 0) {
+    h += PHOTO_ENTRY_SEP_GAP * 2;
+    h += titleLines.length * L.photoEntryTitleLineMm;
   }
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(L.photoEntryTitleFontPt);
-  const titleLines = doc.splitTextToSize(item.title, cellW) as string[];
-  h +=
-    titleLines.length * L.photoEntryTitleLineMm +
-    PHOTO_ENTRY_INNER_GAP +
-    BANNER_H;
-
+  h += PHOTO_ENTRY_INNER_GAP + BANNER_H;
+  h += PHOTO_ENTRY_CARD_PAD;
   return h;
 }
 
@@ -661,9 +658,36 @@ function measureSectionChapterMinHeight(
   if (sectionItems.length > 0) {
     const cellW = photoEntryCellWidth(uW);
     const firstRowItems = sectionItems.slice(0, PHOTO_ENTRY_COLS);
-    h += measurePhotoRowHeight(doc, firstRowItems, cellW, cellW);
+    h += measurePhotoRowHeight(
+      doc,
+      firstRowItems,
+      cellW,
+      photoEntryInnerWidth(cellW),
+    );
   }
   return h;
+}
+
+function drawPhotoEntryMissingPhoto(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  size: number,
+) {
+  doc.setDrawColor(...PDF_THEME.border);
+  doc.setFillColor(...PDF_THEME.summaryBg);
+  doc.roundedRect(
+    x,
+    y,
+    size,
+    size,
+    PDF_THEME.photoRadiusMm,
+    PDF_THEME.photoRadiusMm,
+    "FD",
+  );
+  doc.setFontSize(T.photoCaption);
+  doc.setTextColor(...PDF_THEME.textMuted);
+  doc.text("N/D", x + size / 2 - 3, y + size / 2);
 }
 
 function drawPhotoEntryCell(
@@ -672,54 +696,65 @@ function drawPhotoEntryCell(
   x: number,
   y: number,
   cellW: number,
-  photoSize: number = cellW,
-): number {
+  photoSize: number,
+  cardH: number,
+): void {
   const severity = normalizeSeverity(item.severity);
   const photoData = item.photos[0];
-  let cy = y;
+  const innerW = photoEntryInnerWidth(cellW);
+  const innerX = x + PHOTO_ENTRY_CARD_PAD;
 
-  if (photoData) {
-    drawPhotoCell(doc, photoData, x, cy, 0, photoSize, false);
-  } else {
-    doc.setDrawColor(...PDF_THEME.border);
-    doc.setFillColor(...PDF_THEME.summaryBg);
-    doc.roundedRect(
-      x,
-      cy,
-      photoSize,
-      photoSize,
-      PDF_THEME.photoRadiusMm,
-      PDF_THEME.photoRadiusMm,
-      "FD",
-    );
-    doc.setFontSize(T.photoCaption);
-    doc.setTextColor(...PDF_THEME.textMuted);
-    doc.text("N/D", x + photoSize / 2 - 3, cy + photoSize / 2);
-  }
-  cy += photoSize + L.photoEntryTitleGapMm;
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(L.photoEntryTitleFontPt);
-  doc.setTextColor(...PDF_THEME.text);
-  const titleLines = doc.splitTextToSize(item.title, cellW) as string[];
-  for (const line of titleLines) {
-    doc.text(line, x, cy);
-    cy += L.photoEntryTitleLineMm;
-  }
-  cy += PHOTO_ENTRY_INNER_GAP;
-
-  cy = drawSeverityBannerPdf(
-    doc,
-    severity,
+  doc.setFillColor(...PDF_THEME.card);
+  doc.setDrawColor(...PDF_THEME.borderLight);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(
     x,
-    cy,
-    getSeverityReportBannerLabel(severity),
+    y,
+    cellW,
+    cardH,
+    PDF_THEME.cardRadiusMm,
+    PDF_THEME.cardRadiusMm,
+    "FD",
   );
 
-  return cy;
+  const photoX = innerX + (innerW - photoSize) / 2;
+  let cy = y + PHOTO_ENTRY_CARD_PAD;
+
+  if (photoData) {
+    drawPhotoCell(doc, photoData, photoX, cy, 0, photoSize, false);
+  } else {
+    drawPhotoEntryMissingPhoto(doc, photoX, cy, photoSize);
+  }
+  cy += photoSize;
+
+  const titleLines = measurePhotoEntryTitleLines(doc, item.title, innerW);
+  if (titleLines.length > 0) {
+    cy += PHOTO_ENTRY_SEP_GAP;
+    doc.setDrawColor(...PDF_THEME.borderLight);
+    doc.setLineWidth(0.25);
+    doc.line(innerX, cy, innerX + innerW, cy);
+    cy += PHOTO_ENTRY_SEP_GAP;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(L.photoEntryTitleFontPt);
+    doc.setTextColor(...PDF_THEME.text);
+    for (const line of titleLines) {
+      doc.text(line, innerX, cy);
+      cy += L.photoEntryTitleLineMm;
+    }
+  }
+
+  const bannerY = y + cardH - PHOTO_ENTRY_CARD_PAD - BANNER_H;
+  drawSeverityBannerPdf(
+    doc,
+    severity,
+    innerX,
+    bannerY,
+    getSeverityReportBannerLabel(severity),
+  );
 }
 
-/** Riduce la foto per riempire lo spazio residuo prima di saltare pagina */
+/** Salta pagina se la riga non entra nello spazio verticale residuo (foto sempre a dimensione piena) */
 function resolvePhotoRowLayout(
   doc: jsPDF,
   rowItems: Criticism[],
@@ -727,24 +762,14 @@ function resolvePhotoRowLayout(
   y: number,
   rowGap: number,
 ): { y: number; photoSize: number; rowH: number } {
-  let photoSize = cellW;
+  const innerW = photoEntryInnerWidth(cellW);
+  const photoSize = innerW;
   let rowH = measurePhotoRowHeight(doc, rowItems, cellW, photoSize);
   const available = PAGE_BOTTOM - y - rowGap;
 
   if (rowH > available) {
-    const textBlock = measurePhotoRowHeight(doc, rowItems, cellW, 0);
-    const overhead = textBlock + L.photoEntryTitleGapMm;
-    const fitPhoto = Math.min(cellW, available - overhead);
-    if (fitPhoto >= PHOTO_ENTRY_MIN_SIZE_MM) {
-      photoSize = fitPhoto;
-      rowH = measurePhotoRowHeight(doc, rowItems, cellW, photoSize);
-    }
-  }
-
-  if (rowH > PAGE_BOTTOM - y - rowGap) {
     doc.addPage();
     y = PAGE_TOP;
-    photoSize = cellW;
     rowH = measurePhotoRowHeight(doc, rowItems, cellW, photoSize);
   }
 
@@ -779,7 +804,15 @@ function renderCriticismItems(
 
     rowItems.forEach((item, colIdx) => {
       const x = mL + colIdx * (cellW + PHOTO_ENTRY_COL_GAP);
-      drawPhotoEntryCell(doc, item, x, y, cellW, layout.photoSize);
+      drawPhotoEntryCell(
+        doc,
+        item,
+        x,
+        y,
+        cellW,
+        layout.photoSize,
+        layout.rowH,
+      );
     });
 
     y += layout.rowH + rowGap;
@@ -849,34 +882,6 @@ function drawSeverityBannerPdf(
   });
 }
 
-/** Foto sotto il testo, disposte a riga con a capo */
-function drawPhotosRowBelow(
-  doc: jsPDF,
-  photos: string[],
-  startX: number,
-  startY: number,
-  maxX: number,
-): number {
-  let photoX = startX;
-  let photoY = startY;
-  let rowStartY = startY;
-  let maxBottom = startY;
-
-  photos.forEach((photoData, pIdx) => {
-    if (photoX + PHOTO_SIDE_MM > maxX && photoX > startX) {
-      photoX = startX;
-      photoY = rowStartY + PHOTO_ROW_STRIDE;
-      rowStartY = photoY;
-    }
-
-    drawPhotoCell(doc, photoData, photoX, photoY, pIdx, PHOTO_SIDE_MM);
-    maxBottom = Math.max(maxBottom, photoY + PHOTO_ROW_STRIDE);
-    photoX += PHOTO_SIDE_MM + PHOTO_COL_GAP_MM;
-  });
-
-  return maxBottom;
-}
-
 function dataUrlImageFormat(dataUrl: string): "JPEG" | "PNG" | "WEBP" {
   if (dataUrl.includes("image/png")) return "PNG";
   if (dataUrl.includes("image/webp")) return "WEBP";
@@ -911,7 +916,7 @@ function drawPhotoCell(
   px: number,
   py: number,
   pIdx: number,
-  sizeMm: number = PHOTO_SIDE_MM,
+  sizeMm: number,
   showCaption = true,
 ) {
   const s = sizeMm;

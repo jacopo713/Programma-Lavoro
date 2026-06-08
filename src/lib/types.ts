@@ -9,7 +9,6 @@ export interface Criticism {
   sectionId: SectionId;
   title: string;
   time: string;
-  /** Una sola foto per voce */
   photos: string[];
   severity: SeverityLevel;
   /** Voce archiviata come risolta */

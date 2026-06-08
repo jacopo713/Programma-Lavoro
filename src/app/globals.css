@@ -2335,6 +2335,23 @@ main {
   outline-offset: 2px;
 }
 
+.btn-icon:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-icon:disabled:hover {
+  border-color: var(--border);
+  color: inherit;
+  background: var(--card);
+}
+
+.btn-icon--reorder:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-light);
+}
+
 .crit-card--editing {
   box-shadow: 0 0 0 2px rgba(32, 80, 184, 0.25);
   border-color: var(--brand);
@@ -2811,6 +2828,21 @@ main {
   line-height: 1.35;
   color: var(--text);
   border-top: 1px solid var(--border-light);
+}
+
+.crit-card-reorder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+
+.crit-card-reorder .btn-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
 }
 
 .crit-card-photo-block .severity-banner {

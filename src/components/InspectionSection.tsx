@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { useRef } from "react";
 import { useAppToast } from "@/contexts/ToastContext";
 import { useImageFileInput } from "@/hooks/useImageFileInput";
+import { MAX_PHOTOS_PER_UPLOAD } from "@/lib/constants";
 import type { InspectionSectionDef } from "@/lib/inspectionSections";
 import type { Criticism, SeverityLevel } from "@/lib/types";
 import type { CriticismFormInitial } from "./AddCriticismForm";
@@ -16,18 +17,16 @@ interface InspectionSectionProps {
   sectionCount: number;
   sectionDescription: string;
   onSectionDescriptionSave: (value: string) => void;
-  formOpen: boolean;
-  isActiveFormSection: boolean;
-  formMode: "add" | "edit";
-  formSession: number;
   editingId: number | null;
+  formSession: number;
   focusedId?: number | null;
   formInitial?: CriticismFormInitial;
-  onStartAdd: (photo: string) => void;
+  onStartAdd: (photos: string[]) => void;
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
   onToggleResolved: (id: number, resolved: boolean) => void;
   onPhotoClick: (src: string) => void;
+  onMove?: (id: number, direction: -1 | 1) => void;
   onFormCancel: () => void;
   onFormSave: (title: string, photo: string, severity: SeverityLevel) => void;
   canManagePhotos?: boolean;
@@ -40,11 +39,8 @@ export function InspectionSection({
   sectionCount,
   sectionDescription,
   onSectionDescriptionSave,
-  formOpen,
-  isActiveFormSection,
-  formMode,
-  formSession,
   editingId,
+  formSession,
   focusedId = null,
   formInitial,
   onStartAdd,
@@ -52,6 +48,7 @@ export function InspectionSection({
   onDelete,
   onToggleResolved,
   onPhotoClick,
+  onMove,
   onFormCancel,
   onFormSave,
   canManagePhotos = true,
@@ -62,7 +59,9 @@ export function InspectionSection({
   const { showToast } = useAppToast();
 
   const { openPicker, inputProps } = useImageFileInput({
-    onPhotoReady: onStartAdd,
+    multiple: true,
+    maxPhotos: MAX_PHOTOS_PER_UPLOAD,
+    onPhotosReady: onStartAdd,
     showToast,
   });
 
@@ -71,11 +70,13 @@ export function InspectionSection({
       showToast("Accedi per allegare foto", "warning");
       return;
     }
+    if (savingPhoto) return;
     openPicker();
   };
 
-  const addFormActive =
-    formOpen && isActiveFormSection && formMode === "add";
+  const sectionEditingId = items.some((item) => item.id === editingId)
+    ? editingId
+    : null;
 
   return (
     <section
@@ -96,12 +97,12 @@ export function InspectionSection({
             type="button"
             className="btn-section-add"
             onClick={handleOpenPicker}
-            disabled={addFormActive || !canManagePhotos}
+            disabled={!canManagePhotos || savingPhoto}
             aria-label={`Aggiungi foto in ${section.title}`}
             title={canManagePhotos ? undefined : "Accedi per allegare foto"}
           >
             <Plus size={16} aria-hidden />
-            Aggiungi foto
+            {savingPhoto ? "Caricamento…" : "Aggiungi foto"}
           </button>
         </div>
         {!canManagePhotos ? (
@@ -125,18 +126,18 @@ export function InspectionSection({
 
       <CriticismList
         items={items}
-        focusedId={focusedId}
-        formOpen={formOpen && isActiveFormSection}
-        formMode={formMode}
+        editingId={sectionEditingId}
         formSession={formSession}
-        editingId={editingId}
+        focusedId={focusedId}
         formInitial={formInitial}
         onEdit={onEdit}
         onDelete={onDelete}
         onToggleResolved={onToggleResolved}
         onPhotoClick={onPhotoClick}
+        onMove={onMove}
         onFormCancel={onFormCancel}
         onFormSave={onFormSave}
+        canReorder={canManagePhotos}
         authRequired={!canManagePhotos}
         saving={savingPhoto}
       />
