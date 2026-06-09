@@ -67,7 +67,10 @@ export async function deleteUserAccount(
   reauth: ReauthenticateInput,
 ): Promise<void> {
   await reauthenticateUser(user, reauth);
-  await purgeUserData(user.uid);
-  await releaseMembership(user.uid);
+  const uid = user.uid;
+  // Se la pulizia Firestore fallisce, NON eliminare l'account Auth:
+  // evita documenti orfani in users/{uid} senza utente corrispondente.
+  await purgeUserData(uid);
+  await releaseMembership(uid);
   await deleteFirebaseAuthUser(user);
 }
