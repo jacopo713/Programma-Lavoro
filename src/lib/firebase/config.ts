@@ -8,6 +8,13 @@ export const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ?? "",
 };
 
+/**
+ * Chiave del sito reCAPTCHA v3 per Firebase App Check.
+ * Se assente, App Check non viene inizializzato (l'app resta funzionante).
+ */
+export const appCheckSiteKey =
+  process.env.NEXT_PUBLIC_FIREBASE_APPCHECK_SITE_KEY ?? "";
+
 export function isFirebaseConfigured(): boolean {
   return Boolean(
     firebaseConfig.apiKey &&

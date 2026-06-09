@@ -46,7 +46,9 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     user,
     configured,
     loading: authLoading,
+    authStatus,
     justRegistered,
+    pendingLegalAcceptance,
     clearJustRegistered,
   } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -93,13 +95,20 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (!user) {
+    // Utente non abilitato (o verifica fallita): nessun caricamento dati.
+    if (!user || authStatus === "denied" || authStatus === "error") {
       setProfile(null);
       if (!authLoading) {
         setLoading(false);
       }
       setWizardOpen(false);
       setProfileLoadError(null);
+      return;
+    }
+
+    // In attesa dell'esito della verifica di autorizzazione.
+    if (authStatus === "checking") {
+      setLoading(true);
       return;
     }
 
@@ -110,7 +119,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     }
 
     void refreshProfile();
-  }, [user?.uid, configured, authLoading, refreshProfile]);
+  }, [user?.uid, configured, authLoading, authStatus, refreshProfile]);
 
   const needsOnboarding = useMemo(() => {
     if (!user || loading || authLoading) return false;
@@ -120,10 +129,29 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   }, [user, loading, authLoading, profile]);
 
   useEffect(() => {
-    if (!user || !justRegistered) return;
+    if (pendingLegalAcceptance) {
+      setWizardOpen(false);
+    }
+  }, [pendingLegalAcceptance]);
+
+  useEffect(() => {
+    if (
+      !user ||
+      authStatus !== "authorized" ||
+      pendingLegalAcceptance ||
+      !justRegistered
+    ) {
+      return;
+    }
     setWizardOpen(true);
     clearJustRegistered();
-  }, [user, justRegistered, clearJustRegistered]);
+  }, [
+    user,
+    authStatus,
+    pendingLegalAcceptance,
+    justRegistered,
+    clearJustRegistered,
+  ]);
 
   const openWizard = useCallback(() => {
     setWizardOpen(true);

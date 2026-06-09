@@ -24,3 +24,10 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  # App Check (reCAPTCHA v3). Decommenta e inserisci la site key per attivarlo.
+  # Deve essere disponibile a BUILD (le variabili NEXT_PUBLIC sono inlinate nel bundle).
+  # - variable: NEXT_PUBLIC_FIREBASE_APPCHECK_SITE_KEY
+  #   value: "LA_TUA_RECAPTCHA_V3_SITE_KEY"
+  #   availability:
+  #     - BUILD
+  #     - RUNTIME

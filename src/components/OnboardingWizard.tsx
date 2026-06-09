@@ -296,9 +296,16 @@ export function OnboardingWizard() {
 }
 
 export function OnboardingRunner() {
-  const { user } = useAuth();
+  const { user, authStatus, pendingLegalAcceptance } = useAuth();
   const { wizardOpen } = useUserProfile();
 
-  if (!user || !wizardOpen) return null;
+  if (
+    !user ||
+    authStatus !== "authorized" ||
+    pendingLegalAcceptance ||
+    !wizardOpen
+  ) {
+    return null;
+  }
   return <OnboardingWizard />;
 }

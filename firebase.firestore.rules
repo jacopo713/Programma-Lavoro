@@ -1,10 +1,59 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+    // ── Limite utenti (max 10) ────────────────────────────────────────────
+    // Richiede un documento contatore creato UNA volta dall'amministratore:
+    //   /meta/members  →  { count: 0 }
+    // Ogni nuovo utente "occupa un posto" creando /members/{uid} e
+    // incrementando il contatore nella stessa transazione (vedi membership.ts).
 
+    function isMember() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid));
+    }
+
+    match /meta/members {
+      allow read: if request.auth != null;
+      allow update: if request.auth != null
+        && request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count is number
+        && request.resource.data.count >= 0
+        && request.resource.data.count <= 10
+        && (
+          // Incremento: solo contestualmente alla creazione del proprio posto
+          (request.resource.data.count == resource.data.count + 1
+            && !exists(/databases/$(database)/documents/members/$(request.auth.uid))
+            && getAfter(/databases/$(database)/documents/members/$(request.auth.uid)).data.joinedAt is string)
+          ||
+          // Decremento: solo contestualmente al rilascio del proprio posto
+          (request.resource.data.count == resource.data.count - 1
+            && exists(/databases/$(database)/documents/members/$(request.auth.uid))
+            && !existsAfter(/databases/$(database)/documents/members/$(request.auth.uid)))
+        );
+      allow create, delete: if false;
+    }
+
+    match /members/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      // Si può occupare un posto solo se il contatore viene incrementato di 1
+      // e resta entro il limite massimo.
       allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['joinedAt'])
+        && request.resource.data.joinedAt is string
+        && getAfter(/databases/$(database)/documents/meta/members).data.count
+            == get(/databases/$(database)/documents/meta/members).data.count + 1
+        && getAfter(/databases/$(database)/documents/meta/members).data.count <= 10;
+
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── Dati utente ───────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isMember() && request.auth.uid == userId;
+
+      allow create: if isMember()
         && request.auth.uid == userId
         && request.resource.data.keys().hasAll([
           'firstName',
@@ -26,7 +75,7 @@ service cloud.firestore {
         && request.resource.data.createdAt is string
         && request.resource.data.updatedAt is string;
 
-      allow update: if request.auth != null
+      allow update: if isMember()
         && request.auth.uid == userId
         && request.resource.data.firstName is string
         && request.resource.data.lastName is string
@@ -37,12 +86,12 @@ service cloud.firestore {
           || request.resource.data.onboardingSkippedAt is string)
         && request.resource.data.updatedAt is string;
 
-      allow delete: if request.auth != null && request.auth.uid == userId;
+      allow delete: if isMember() && request.auth.uid == userId;
     }
 
     match /users/{userId}/workspace/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow delete: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isMember() && request.auth.uid == userId;
+      allow delete: if isMember() && request.auth.uid == userId;
     }
   }
 }

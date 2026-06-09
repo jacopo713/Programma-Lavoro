@@ -10,6 +10,7 @@ import {
 } from "./authActions";
 import { deleteAllUserStorage } from "./criticismPhotos";
 import { ensureFirestoreOnline, getFirestoreDb } from "./client";
+import { releaseMembership } from "./membership";
 
 const USERS_COLLECTION = "users";
 const WORKSPACE_COLLECTION = "workspace";
@@ -67,5 +68,6 @@ export async function deleteUserAccount(
 ): Promise<void> {
   await reauthenticateUser(user, reauth);
   await purgeUserData(user.uid);
+  await releaseMembership(user.uid);
   await deleteFirebaseAuthUser(user);
 }

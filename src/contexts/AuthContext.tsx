@@ -18,10 +18,13 @@ import {
   type ReactNode,
 } from "react";
 import { clearLegacyBrowserWorkspace } from "@/lib/browserWorkspaceStorage";
+import { ensureMembership } from "@/lib/firebase/membership";
 import {
+  deleteFirebaseAuthUser,
   sendPasswordResetEmailForUser,
   signInWithGooglePopup,
 } from "@/lib/firebase/authActions";
+import { releaseMembership } from "@/lib/firebase/membership";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { firebaseAuthErrorMessage } from "@/lib/firebase/authErrors";
@@ -30,15 +33,32 @@ import { deleteUserAccount as runDeleteUserAccount } from "@/lib/firebase/delete
 
 export type { ReauthenticateInput };
 
+/**
+ * Stato dell'utente loggato rispetto al limite di posti disponibili.
+ * - "authorized": è un membro (o ha appena ottenuto un posto)
+ * - "denied": limite massimo di utenti raggiunto
+ * Significativo solo quando `user` è presente.
+ */
+export type AuthStatus = "checking" | "authorized" | "denied" | "error";
+
+export type GoogleSignInResult = {
+  isNewUser: boolean;
+  needsLegalAcceptance: boolean;
+};
+
 type AuthContextValue = {
   user: User | null;
   loading: boolean;
   configured: boolean;
+  authStatus: AuthStatus;
+  pendingLegalAcceptance: boolean;
   justRegistered: boolean;
   clearJustRegistered: () => void;
+  acceptLegalConsent: () => void;
+  rejectLegalConsent: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (options?: { legalAccepted?: boolean }) => Promise<GoogleSignInResult>;
   sendPasswordReset: (email: string) => Promise<void>;
   deleteAccount: (reauth: ReauthenticateInput) => Promise<void>;
   signOut: () => Promise<void>;
@@ -46,10 +66,32 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const PENDING_LEGAL_CONSENT_KEY = "pendingLegalConsent";
+
+function readPendingLegalConsentUid(): string | null {
+  if (typeof sessionStorage === "undefined") return null;
+  return sessionStorage.getItem(PENDING_LEGAL_CONSENT_KEY);
+}
+
+function writePendingLegalConsentUid(uid: string): void {
+  if (typeof sessionStorage === "undefined") return;
+  sessionStorage.setItem(PENDING_LEGAL_CONSENT_KEY, uid);
+}
+
+function clearPendingLegalConsentUid(): void {
+  if (typeof sessionStorage === "undefined") return;
+  sessionStorage.removeItem(PENDING_LEGAL_CONSENT_KEY);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [justRegistered, setJustRegistered] = useState(false);
+  const [pendingLegalAcceptance, setPendingLegalAcceptance] = useState(false);
+  const [authCheck, setAuthCheck] = useState<{
+    uid: string;
+    status: Exclude<AuthStatus, "checking">;
+  } | null>(null);
   const previousUidRef = useRef<string | null>(null);
   const configured = isFirebaseConfigured();
 
@@ -70,11 +112,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       previousUidRef.current = nextUid;
       setUser(nextUser);
+      setPendingLegalAcceptance(
+        Boolean(nextUser && readPendingLegalConsentUid() === nextUser.uid),
+      );
       setLoading(false);
     });
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let cancelled = false;
+    ensureMembership(user)
+      .then((hasSeat) => {
+        if (cancelled) return;
+        setAuthCheck({ uid: user.uid, status: hasSeat ? "authorized" : "denied" });
+      })
+      .catch(() => {
+        if (!cancelled) setAuthCheck({ uid: user.uid, status: "error" });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const authStatus: AuthStatus =
+    user && authCheck?.uid === user.uid ? authCheck.status : "checking";
 
   const signIn = useCallback(async (email: string, password: string) => {
     const auth = getFirebaseAuth();
@@ -105,12 +171,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const signInWithGoogle = useCallback(async () => {
-    const { isNewUser } = await signInWithGooglePopup();
-    if (isNewUser) {
-      setJustRegistered(true);
+  const acceptLegalConsent = useCallback(() => {
+    clearPendingLegalConsentUid();
+    setPendingLegalAcceptance(false);
+    setJustRegistered(true);
+  }, []);
+
+  const rejectLegalConsent = useCallback(async () => {
+    const auth = getFirebaseAuth();
+    const currentUser = auth?.currentUser;
+    const uid = currentUser?.uid;
+
+    clearPendingLegalConsentUid();
+    setPendingLegalAcceptance(false);
+    setJustRegistered(false);
+
+    if (!auth || !currentUser) return;
+
+    try {
+      if (uid) {
+        await releaseMembership(uid);
+      }
+      await deleteFirebaseAuthUser(currentUser);
+    } catch {
+      await firebaseSignOut(auth);
     }
   }, []);
+
+  const signInWithGoogle = useCallback(
+    async (options?: { legalAccepted?: boolean }): Promise<GoogleSignInResult> => {
+      const legalAccepted = options?.legalAccepted === true;
+      const { isNewUser } = await signInWithGooglePopup();
+
+      if (isNewUser) {
+        if (!legalAccepted) {
+          const auth = getFirebaseAuth();
+          const uid = auth?.currentUser?.uid;
+          if (uid) {
+            writePendingLegalConsentUid(uid);
+          }
+          setPendingLegalAcceptance(true);
+          return { isNewUser: true, needsLegalAcceptance: true };
+        }
+        setJustRegistered(true);
+      }
+
+      return { isNewUser, needsLegalAcceptance: false };
+    },
+    [],
+  );
 
   const sendPasswordReset = useCallback(async (email: string) => {
     await sendPasswordResetEmailForUser(email);
@@ -125,6 +234,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setJustRegistered(false);
+      setPendingLegalAcceptance(false);
+      clearPendingLegalConsentUid();
       await runDeleteUserAccount(currentUser, reauth);
     },
     [],
@@ -134,6 +245,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const auth = getFirebaseAuth();
     if (!auth) return;
     setJustRegistered(false);
+    setPendingLegalAcceptance(false);
+    clearPendingLegalConsentUid();
     await firebaseSignOut(auth);
   }, []);
 
@@ -142,8 +255,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       configured,
+      authStatus,
+      pendingLegalAcceptance,
       justRegistered,
       clearJustRegistered,
+      acceptLegalConsent,
+      rejectLegalConsent,
       signIn,
       signUp,
       signInWithGoogle,
@@ -155,8 +272,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       configured,
+      authStatus,
+      pendingLegalAcceptance,
       justRegistered,
       clearJustRegistered,
+      acceptLegalConsent,
+      rejectLegalConsent,
       signIn,
       signUp,
       signInWithGoogle,

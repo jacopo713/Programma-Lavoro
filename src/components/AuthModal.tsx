@@ -71,8 +71,12 @@ export function AuthModal({
 
     setGoogleSubmitting(true);
     try {
-      await signInWithGoogle();
-      onClose();
+      const { needsLegalAcceptance } = await signInWithGoogle({
+        legalAccepted: acceptedLegal,
+      });
+      if (!needsLegalAcceptance) {
+        onClose();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Operazione non riuscita.");
     } finally {

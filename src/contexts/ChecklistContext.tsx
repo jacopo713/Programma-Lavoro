@@ -15,8 +15,8 @@ export function ChecklistProvider({
   children: ReactNode;
   onStorageError?: () => void;
 }) {
-  const { user, loading: authLoading } = useAuth();
-  const authReady = !authLoading && Boolean(user);
+  const { user, loading: authLoading, authStatus } = useAuth();
+  const authReady = !authLoading && Boolean(user) && authStatus === "authorized";
   const value = useChecklist(user?.uid ?? null, authReady, onStorageError);
   return (
     <ChecklistContext.Provider value={value}>{children}</ChecklistContext.Provider>

@@ -1,4 +1,8 @@
 import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
+import {
+  initializeAppCheck,
+  ReCaptchaV3Provider,
+} from "firebase/app-check";
 import { getAuth, type Auth } from "firebase/auth";
 import {
   enableNetwork,
@@ -7,13 +11,36 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
-import { firebaseConfig, isFirebaseConfigured } from "./config";
+import { appCheckSiteKey, firebaseConfig, isFirebaseConfigured } from "./config";
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let storage: FirebaseStorage | undefined;
 let firestore: Firestore | undefined;
 let firestoreOnlinePromise: Promise<void> | null = null;
+let appCheckInitialized = false;
+
+function setupAppCheck(firebaseApp: FirebaseApp): void {
+  if (appCheckInitialized || typeof window === "undefined" || !appCheckSiteKey) {
+    return;
+  }
+  appCheckInitialized = true;
+
+  if (process.env.NODE_ENV !== "production") {
+    (
+      self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean }
+    ).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  }
+
+  try {
+    initializeAppCheck(firebaseApp, {
+      provider: new ReCaptchaV3Provider(appCheckSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } catch {
+    /* initializeAppCheck può lanciare se già inizializzato */
+  }
+}
 
 function getFirebaseApp(): FirebaseApp | null {
   if (!isFirebaseConfigured() || typeof window === "undefined") {
@@ -23,6 +50,8 @@ function getFirebaseApp(): FirebaseApp | null {
   if (!app) {
     app = getApps().length > 0 ? getApps()[0]! : initializeApp(firebaseConfig);
   }
+
+  setupAppCheck(app);
 
   return app;
 }

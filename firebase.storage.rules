@@ -1,6 +1,9 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Il limite utenti è già applicato su Firestore (isMember) e nel gate
+    // dell'app. Il controllo cross-service firestore.exists() qui causava
+    // storage/unauthorized anche con /members/{uid} presente.
     match /users/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
