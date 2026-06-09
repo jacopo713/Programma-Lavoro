@@ -210,6 +210,35 @@ body {
   color: var(--brand);
 }
 
+@media (max-width: 640px) {
+  /* Login obbligatorio: il dialog centrato copriva titolo e sottotitolo */
+  .auth-gate:has(.auth-modal--mandatory) {
+    justify-content: flex-start;
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
+
+  .auth-gate:has(.auth-modal--mandatory) .auth-modal.auth-modal--mandatory[open] {
+    position: fixed;
+    top: max(0.75rem, env(safe-area-inset-top));
+    bottom: auto;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    margin: 0;
+    max-height: min(78dvh, calc(100dvh - 10rem));
+  }
+
+  .auth-gate:has(.auth-modal--mandatory) .auth-gate-brand {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: max(1.25rem, env(safe-area-inset-bottom));
+    padding: 0 1.5rem;
+    max-width: none;
+  }
+}
+
 .auth-modal {
   border: none;
   padding: 0;
