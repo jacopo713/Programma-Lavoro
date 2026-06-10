@@ -5,8 +5,11 @@ import { MOBILE_NAV_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { compressImageFile } from "@/lib/compressImage";
 import {
   MAX_FILE_SIZE_BYTES,
+  MAX_FILE_SIZE_MB,
   MAX_PHOTOS_PER_UPLOAD,
 } from "@/lib/constants";
+
+const MAX_FILE_SIZE_TOAST = `Immagine troppo grande — massimo ${MAX_FILE_SIZE_MB} MB`;
 
 export type ImageFileInputToast = (
   message: string,
@@ -78,7 +81,7 @@ export function useImageFileInput({
         return;
       }
       if (file.size > MAX_FILE_SIZE_BYTES) {
-        showToast?.("Immagine troppo grande — massimo 10 MB", "warning");
+        showToast?.(MAX_FILE_SIZE_TOAST, "warning");
         return;
       }
 
@@ -104,7 +107,7 @@ export function useImageFileInput({
 
       const oversized = imageFiles.find((file) => file.size > MAX_FILE_SIZE_BYTES);
       if (oversized) {
-        showToast?.("Immagine troppo grande — massimo 10 MB", "warning");
+        showToast?.(MAX_FILE_SIZE_TOAST, "warning");
         return;
       }
 
