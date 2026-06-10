@@ -3,7 +3,7 @@ import type { User } from "firebase/auth";
 import { ensureFirestoreOnline, getFirestoreDb } from "./client";
 
 /** Numero massimo di utenti ammessi. Deve combaciare col valore nelle regole. */
-export const MAX_USERS = 10;
+export const MAX_USERS = 20;
 
 const MEMBERS_COLLECTION = "members";
 
