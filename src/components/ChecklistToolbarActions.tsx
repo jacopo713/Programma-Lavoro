@@ -88,7 +88,7 @@ export function ChecklistToolbarActions() {
         setPdfPreviewOpen(true);
         showToast(
           isMobile
-            ? "PDF pronto — salva o condividi dal pannello"
+            ? "PDF pronto — tocca Scarica PDF nel pannello"
             : "Anteprima PDF pronta",
           "pdf",
         );

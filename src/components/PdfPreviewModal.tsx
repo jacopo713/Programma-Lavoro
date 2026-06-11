@@ -2,6 +2,7 @@
 
 import { Download, ExternalLink, Share2, X } from "lucide-react";
 import { useEffect, useMemo } from "react";
+import { useAppToast } from "@/contexts/ToastContext";
 import { MOBILE_NAV_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { downloadPdfBlob } from "@/lib/pdf/exportChecklistPdf";
 import { canSharePdfFile, sharePdfFile } from "@/lib/pdf/sharePdf";
@@ -21,6 +22,7 @@ export function PdfPreviewModal({
   filename,
   onClose,
 }: PdfPreviewModalProps) {
+  const { showToast } = useAppToast();
   const isMobile = useMediaQuery(MOBILE_NAV_QUERY);
   const shareAvailable = useMemo(() => {
     if (!open || !blob) return false;
@@ -42,43 +44,47 @@ export function PdfPreviewModal({
 
   const openPreviewInNewTab = () => {
     if (!previewUrl) return;
-    const opened = window.open(previewUrl, "_blank");
-    if (!opened) {
-      handleDownload();
+    window.open(previewUrl, "_blank");
+  };
+
+  const shareWithFallback = async () => {
+    if (!blob) return;
+    const result = await sharePdfFile(blob, filename);
+    if (result === "failed") {
+      if (downloadPdfBlob(blob, filename)) {
+        showToast("PDF salvato nei Download del dispositivo", "pdf");
+      } else {
+        openPreviewInNewTab();
+      }
     }
   };
 
   const handleDownload = () => {
     if (!blob) return;
+    // Download sincrono nel gesto utente: niente await prima del click,
+    // altrimenti alcuni browser mobili lo bloccano silenziosamente.
     const ok = downloadPdfBlob(blob, filename);
-    if (!ok && previewUrl) {
-      window.open(previewUrl, "_blank");
-    }
-  };
-
-  const handleShareOrDownload = () => {
-    if (!blob) return;
-    if (shareAvailable) {
-      void (async () => {
-        const result = await sharePdfFile(blob, filename);
-        if (result === "failed") {
-          handleDownload();
-        }
-      })();
+    if (ok) {
+      showToast(
+        isMobile
+          ? "PDF salvato nei Download del dispositivo"
+          : "PDF scaricato",
+        "pdf",
+      );
       return;
     }
-    handleDownload();
+    if (shareAvailable) {
+      void shareWithFallback();
+      return;
+    }
+    openPreviewInNewTab();
+  };
+
+  const handleShare = () => {
+    void shareWithFallback();
   };
 
   if (!open || !previewUrl || !blob) return null;
-
-  const primaryLabel = isMobile
-    ? shareAvailable
-      ? "Salva o condividi PDF"
-      : "Scarica PDF"
-    : "Scarica PDF";
-
-  const PrimaryIcon = isMobile && shareAvailable ? Share2 : Download;
 
   return (
     <div
@@ -99,35 +105,14 @@ export function PdfPreviewModal({
             <p className="pdf-preview-subtitle">{filename}</p>
           </div>
           <div className="pdf-preview-actions">
-            {isMobile ? (
-              <>
-                <button
-                  type="button"
-                  className="btn-save pdf-preview-download"
-                  onClick={handleShareOrDownload}
-                >
-                  <PrimaryIcon size={16} aria-hidden />
-                  <span>{primaryLabel}</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn-export pdf-preview-download"
-                  onClick={openPreviewInNewTab}
-                >
-                  <ExternalLink size={16} aria-hidden />
-                  <span>Apri PDF</span>
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="btn-save pdf-preview-download"
-                onClick={handleDownload}
-              >
-                <Download size={16} aria-hidden />
-                <span className="pdf-preview-download-label">Scarica PDF</span>
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn-save pdf-preview-download"
+              onClick={handleDownload}
+            >
+              <Download size={16} aria-hidden />
+              <span className="pdf-preview-download-label">Scarica PDF</span>
+            </button>
             <button
               type="button"
               className="pdf-preview-close"
@@ -141,19 +126,28 @@ export function PdfPreviewModal({
         {isMobile ? (
           <div className="pdf-preview-fallback">
             <p className="pdf-preview-fallback-text">
-              {shareAvailable
-                ? "Usa Salva o condividi PDF per inviare il report con il nome corretto. Non usare Stampa del browser."
-                : "L'anteprima inline non è supportata su questo dispositivo. Scarica il PDF o aprilo in una nuova scheda. Non usare Stampa del browser."}
+              Tocca Scarica PDF: il report viene salvato sul dispositivo con il
+              nome corretto. Non usare Stampa del browser.
             </p>
             <div className="pdf-preview-fallback-actions">
               <button
                 type="button"
                 className="btn-save pdf-preview-fallback-btn"
-                onClick={handleShareOrDownload}
+                onClick={handleDownload}
               >
-                <PrimaryIcon size={16} aria-hidden />
-                {primaryLabel}
+                <Download size={16} aria-hidden />
+                Scarica PDF
               </button>
+              {shareAvailable ? (
+                <button
+                  type="button"
+                  className="btn-export pdf-preview-fallback-btn"
+                  onClick={handleShare}
+                >
+                  <Share2 size={16} aria-hidden />
+                  Condividi PDF
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="btn-export pdf-preview-fallback-btn"
@@ -162,16 +156,6 @@ export function PdfPreviewModal({
                 <ExternalLink size={16} aria-hidden />
                 Apri PDF
               </button>
-              {!shareAvailable ? (
-                <button
-                  type="button"
-                  className="btn-export pdf-preview-fallback-btn"
-                  onClick={handleDownload}
-                >
-                  <Download size={16} aria-hidden />
-                  Scarica PDF
-                </button>
-              ) : null}
             </div>
           </div>
         ) : (

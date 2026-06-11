@@ -1023,7 +1023,6 @@ export function getPdfFilename(): string {
 }
 
 export function downloadPdfBlob(blob: Blob, filename: string): boolean {
-  let success = false;
   try {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1032,24 +1031,15 @@ export function downloadPdfBlob(blob: Blob, filename: string): boolean {
     a.download = filename;
     document.body.appendChild(a);
     a.click();
+    // Revoca molto ritardata: su dispositivi lenti il download di un PDF
+    // pesante può essere ancora in corso e revocare l'URL lo tronca.
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    }, 500);
-    success = true;
+    }, 60_000);
+    return true;
   } catch (e) {
-    console.warn("Metodo 1 download fallito:", e);
+    console.warn("Download diretto non riuscito:", e);
+    return false;
   }
-
-  if (!success) {
-    try {
-      const url2 = URL.createObjectURL(blob);
-      window.open(url2, "_blank");
-      success = true;
-    } catch (e) {
-      console.warn("Metodo 2 download fallito:", e);
-    }
-  }
-
-  return success;
 }
