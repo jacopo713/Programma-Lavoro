@@ -3709,6 +3709,42 @@ main {
   }
 }
 
+.print-guard {
+  display: none;
+}
+
+.print-guard h1 {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111;
+}
+
+.print-guard p {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #333;
+}
+
+.print-guard p:last-child {
+  margin-bottom: 0;
+}
+
+@media print {
+  .app-shell {
+    display: none !important;
+  }
+
+  .print-guard {
+    display: block !important;
+    padding: 2rem;
+    max-width: 32rem;
+    margin: 0 auto;
+    text-align: center;
+  }
+}
+
 .lightbox {
   position: fixed;
   inset: 0;

@@ -6,8 +6,17 @@ export const STORAGE_KEY_V2 = "rfi-checklist-v2";
 export const STORAGE_KEY_V1 = "rfi-checklist-v1";
 export const STATIONS_STORAGE_KEY = "rfi-stations-v1";
 export const PROFILE_CACHE_KEY_PREFIX = "rfi-profile-cache";
-export const WORKSPACE_REGISTRY_CACHE_PREFIX = "rfi-workspace-registry-cache";
-export const WORKSPACE_STATION_CACHE_PREFIX = "rfi-workspace-station-cache";
+/**
+ * v2: il timestamp in cache riflette solo salvataggi reali. Le chiavi v1
+ * venivano ri-timbrate a ogni caricamento (battevano sempre il cloud) e
+ * vanno ignorate.
+ */
+export const WORKSPACE_REGISTRY_CACHE_PREFIX = "rfi-workspace-registry-cache-v2";
+export const WORKSPACE_STATION_CACHE_PREFIX = "rfi-workspace-station-cache-v2";
+export const LEGACY_WORKSPACE_REGISTRY_CACHE_PREFIX =
+  "rfi-workspace-registry-cache";
+export const LEGACY_WORKSPACE_STATION_CACHE_PREFIX =
+  "rfi-workspace-station-cache";
 
 export function profileCacheKey(uid: string): string {
   return `${PROFILE_CACHE_KEY_PREFIX}:${uid}`;

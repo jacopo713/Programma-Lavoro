@@ -1,4 +1,6 @@
 import {
+  LEGACY_WORKSPACE_REGISTRY_CACHE_PREFIX,
+  LEGACY_WORKSPACE_STATION_CACHE_PREFIX,
   PROFILE_CACHE_KEY_PREFIX,
   STORAGE_KEY,
   STORAGE_KEY_V1,
@@ -55,6 +57,9 @@ export function clearUserScopedLocalCaches(
     `${PROFILE_CACHE_KEY_PREFIX}:${uid}`,
     `${WORKSPACE_REGISTRY_CACHE_PREFIX}:${uid}`,
     `${WORKSPACE_STATION_CACHE_PREFIX}:${uid}:`,
+    // Cache v1 (pre-bump): residui da rimuovere comunque
+    `${LEGACY_WORKSPACE_REGISTRY_CACHE_PREFIX}:${uid}`,
+    `${LEGACY_WORKSPACE_STATION_CACHE_PREFIX}:${uid}:`,
   ];
 
   for (let index = localStorage.length - 1; index >= 0; index -= 1) {

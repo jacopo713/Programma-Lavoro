@@ -1,13 +1,15 @@
 "use client";
 
-import { Download, ExternalLink, X } from "lucide-react";
-import { useEffect } from "react";
+import { Download, ExternalLink, Share2, X } from "lucide-react";
+import { useEffect, useMemo } from "react";
 import { MOBILE_NAV_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { downloadPdfBlob } from "@/lib/pdf/exportChecklistPdf";
+import { canSharePdfFile, sharePdfFile } from "@/lib/pdf/sharePdf";
 
 interface PdfPreviewModalProps {
   open: boolean;
   previewUrl: string | null;
+  blob: Blob | null;
   filename: string;
   onClose: () => void;
 }
@@ -15,10 +17,15 @@ interface PdfPreviewModalProps {
 export function PdfPreviewModal({
   open,
   previewUrl,
+  blob,
   filename,
   onClose,
 }: PdfPreviewModalProps) {
   const isMobile = useMediaQuery(MOBILE_NAV_QUERY);
+  const shareAvailable = useMemo(() => {
+    if (!open || !blob) return false;
+    return canSharePdfFile(blob, filename);
+  }, [open, blob, filename]);
 
   useEffect(() => {
     if (!open) return;
@@ -33,29 +40,45 @@ export function PdfPreviewModal({
     };
   }, [open, onClose]);
 
-  const handleDownload = async () => {
+  const openPreviewInNewTab = () => {
     if (!previewUrl) return;
-    try {
-      const res = await fetch(previewUrl);
-      const blob = await res.blob();
-      const ok = downloadPdfBlob(blob, filename);
-      if (!ok) {
-        window.open(previewUrl, "_blank");
-      }
-    } catch {
+    const opened = window.open(previewUrl, "_blank");
+    if (!opened) {
+      handleDownload();
+    }
+  };
+
+  const handleDownload = () => {
+    if (!blob) return;
+    const ok = downloadPdfBlob(blob, filename);
+    if (!ok && previewUrl) {
       window.open(previewUrl, "_blank");
     }
   };
 
-  const handleOpen = () => {
-    if (!previewUrl) return;
-    const opened = window.open(previewUrl, "_blank");
-    if (!opened) {
-      void handleDownload();
+  const handleShareOrDownload = () => {
+    if (!blob) return;
+    if (shareAvailable) {
+      void (async () => {
+        const result = await sharePdfFile(blob, filename);
+        if (result === "failed") {
+          handleDownload();
+        }
+      })();
+      return;
     }
+    handleDownload();
   };
 
-  if (!open || !previewUrl) return null;
+  if (!open || !previewUrl || !blob) return null;
+
+  const primaryLabel = isMobile
+    ? shareAvailable
+      ? "Salva o condividi PDF"
+      : "Scarica PDF"
+    : "Scarica PDF";
+
+  const PrimaryIcon = isMobile && shareAvailable ? Share2 : Download;
 
   return (
     <div
@@ -77,14 +100,24 @@ export function PdfPreviewModal({
           </div>
           <div className="pdf-preview-actions">
             {isMobile ? (
-              <button
-                type="button"
-                className="btn-save pdf-preview-download"
-                onClick={handleOpen}
-              >
-                <ExternalLink size={16} aria-hidden />
-                <span>Apri PDF</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="btn-save pdf-preview-download"
+                  onClick={handleShareOrDownload}
+                >
+                  <PrimaryIcon size={16} aria-hidden />
+                  <span>{primaryLabel}</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-export pdf-preview-download"
+                  onClick={openPreviewInNewTab}
+                >
+                  <ExternalLink size={16} aria-hidden />
+                  <span>Apri PDF</span>
+                </button>
+              </>
             ) : (
               <button
                 type="button"
@@ -108,26 +141,37 @@ export function PdfPreviewModal({
         {isMobile ? (
           <div className="pdf-preview-fallback">
             <p className="pdf-preview-fallback-text">
-              L&apos;anteprima inline non è supportata su questo dispositivo.
-              Apri il PDF in una nuova scheda o scaricalo sul dispositivo.
+              {shareAvailable
+                ? "Usa Salva o condividi PDF per inviare il report con il nome corretto. Non usare Stampa del browser."
+                : "L'anteprima inline non è supportata su questo dispositivo. Scarica il PDF o aprilo in una nuova scheda. Non usare Stampa del browser."}
             </p>
             <div className="pdf-preview-fallback-actions">
               <button
                 type="button"
                 className="btn-save pdf-preview-fallback-btn"
-                onClick={handleOpen}
+                onClick={handleShareOrDownload}
               >
-                <ExternalLink size={16} aria-hidden />
-                Apri PDF
+                <PrimaryIcon size={16} aria-hidden />
+                {primaryLabel}
               </button>
               <button
                 type="button"
                 className="btn-export pdf-preview-fallback-btn"
-                onClick={handleDownload}
+                onClick={openPreviewInNewTab}
               >
-                <Download size={16} aria-hidden />
-                Scarica PDF
+                <ExternalLink size={16} aria-hidden />
+                Apri PDF
               </button>
+              {!shareAvailable ? (
+                <button
+                  type="button"
+                  className="btn-export pdf-preview-fallback-btn"
+                  onClick={handleDownload}
+                >
+                  <Download size={16} aria-hidden />
+                  Scarica PDF
+                </button>
+              ) : null}
             </div>
           </div>
         ) : (

@@ -35,22 +35,25 @@ export function ChecklistToolbarActions() {
 
   const isMobile = useMediaQuery(MOBILE_NAV_QUERY);
   const [exportLoading, setExportLoading] = useState(false);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pdfResult, setPdfResult] = useState<{
+    blob: Blob;
+    url: string;
+  } | null>(null);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
 
   const closePdfPreview = useCallback(() => {
     setPdfPreviewOpen(false);
-    setPdfPreviewUrl((url) => {
-      if (url) URL.revokeObjectURL(url);
+    setPdfResult((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url);
       return null;
     });
   }, []);
 
   useEffect(() => {
     return () => {
-      if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+      if (pdfResult) URL.revokeObjectURL(pdfResult.url);
     };
-  }, [pdfPreviewUrl]);
+  }, [pdfResult]);
 
   const handleExport = () => {
     if (!hasReportContent || exportLoading) {
@@ -64,8 +67,8 @@ export function ChecklistToolbarActions() {
     void (async () => {
       try {
         setPdfPreviewOpen(false);
-        setPdfPreviewUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
+        setPdfResult((prev) => {
+          if (prev) URL.revokeObjectURL(prev.url);
           return null;
         });
 
@@ -81,11 +84,11 @@ export function ChecklistToolbarActions() {
           totalPhotoCount,
         });
         const url = URL.createObjectURL(blob);
-        setPdfPreviewUrl(url);
+        setPdfResult({ blob, url });
         setPdfPreviewOpen(true);
         showToast(
           isMobile
-            ? "PDF pronto — apri o scarica dal pannello"
+            ? "PDF pronto — salva o condividi dal pannello"
             : "Anteprima PDF pronta",
           "pdf",
         );
@@ -155,7 +158,8 @@ export function ChecklistToolbarActions() {
       </div>
       <PdfPreviewModal
         open={pdfPreviewOpen}
-        previewUrl={pdfPreviewUrl}
+        previewUrl={pdfResult?.url ?? null}
+        blob={pdfResult?.blob ?? null}
         filename={getPdfFilename()}
         onClose={closePdfPreview}
       />

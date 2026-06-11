@@ -8,6 +8,7 @@ import {
   type DocumentData,
 } from "firebase/firestore";
 import {
+  DEFAULT_STATION_NAME,
   workspaceRegistryCacheKey,
   workspaceStationCacheKey,
 } from "@/lib/constants";
@@ -23,6 +24,7 @@ import {
 } from "@/lib/storage";
 import type {
   ChecklistPersisted,
+  Station,
   StationChecklistDoc,
   StationsRegistry,
   WorkspaceRegistryDoc,
@@ -195,6 +197,51 @@ function pickRegistry(
   return isNewer(remote.updatedAt, local.updatedAt) ? remote : local;
 }
 
+/**
+ * Ri-aggancia al registry scelto le stazioni note al cloud ma assenti in
+ * locale, così una stazione creata da un altro dispositivo non sparisce mai
+ * dalla vista (né rischia di essere orfanata al salvataggio successivo).
+ * Quando il registry remoto manca del tutto (riparazione), ricostruisce le
+ * voci dai documenti checklist rimasti orfani su Firestore.
+ */
+function attachMissingRemoteStations(
+  picked: WorkspaceRegistryDoc,
+  remoteRegistry: WorkspaceRegistryDoc | null,
+  remoteChecklists: Map<string, StationChecklistDoc>,
+): WorkspaceRegistryDoc {
+  const known = new Set(picked.stations.map((station) => station.id));
+  const additions: Station[] = [];
+
+  if (remoteRegistry) {
+    for (const station of remoteRegistry.stations) {
+      if (known.has(station.id)) continue;
+      known.add(station.id);
+      additions.push(station);
+    }
+  } else {
+    for (const [stationId, docData] of remoteChecklists) {
+      if (known.has(stationId)) continue;
+      known.add(stationId);
+      additions.push({
+        id: stationId,
+        name: docData.stationName.trim() || DEFAULT_STATION_NAME,
+        createdAt: nowIso(),
+      });
+    }
+  }
+
+  if (additions.length === 0) return picked;
+
+  const stations = [...picked.stations, ...additions];
+  const activeStationId = stations.some(
+    (station) => station.id === picked.activeStationId,
+  )
+    ? picked.activeStationId
+    : stations[0].id;
+
+  return { ...picked, stations, activeStationId };
+}
+
 function photoBelongsToUser(photo: string, uid: string): boolean {
   if (!isRemotePhoto(photo)) return true;
   const literalPath = `/users/${uid}/`;
@@ -221,12 +268,18 @@ function sanitizeChecklistForUid(
   };
 }
 
+interface PickedChecklist {
+  checklist: ChecklistPersisted;
+  /** Timestamp del documento vincitore, da preservare in cache */
+  updatedAt: string;
+}
+
 function pickChecklist(
   remote: StationChecklistDoc | null,
   local: StationChecklistDoc | null,
   stationName: string,
   uid: string,
-): ChecklistPersisted {
+): PickedChecklist {
   const remoteChecklist = remote
     ? normalizeChecklistDoc(remote, stationName)
     : null;
@@ -235,26 +288,37 @@ function pickChecklist(
     : null;
 
   if (!remote) {
-    return sanitizeChecklistForUid(
-      localChecklist ?? {
-        version: 3,
-        items: [],
-        idCounter: 0,
-        stationName,
-        sectionDescriptions: createEmptySectionDescriptions(),
-        reportDate: "",
-      },
-      uid,
-    );
+    return {
+      checklist: sanitizeChecklistForUid(
+        localChecklist ?? {
+          version: 3,
+          items: [],
+          idCounter: 0,
+          stationName,
+          sectionDescriptions: createEmptySectionDescriptions(),
+          reportDate: "",
+        },
+        uid,
+      ),
+      updatedAt: local?.updatedAt ?? "",
+    };
   }
   if (!local) {
-    return sanitizeChecklistForUid(remoteChecklist!, uid);
+    return {
+      checklist: sanitizeChecklistForUid(remoteChecklist!, uid),
+      updatedAt: remote.updatedAt,
+    };
   }
 
-  const picked = isNewer(remote.updatedAt, local.updatedAt)
-    ? remoteChecklist!
-    : localChecklist!;
-  return sanitizeChecklistForUid(picked, uid);
+  // Il locale vince solo se strettamente più recente; a parità vince il cloud.
+  const localWins = isNewer(local.updatedAt, remote.updatedAt);
+  return {
+    checklist: sanitizeChecklistForUid(
+      localWins ? localChecklist! : remoteChecklist!,
+      uid,
+    ),
+    updatedAt: localWins ? local.updatedAt : remote.updatedAt,
+  };
 }
 
 function createFreshLoadedWorkspace(): LoadedWorkspace {
@@ -350,15 +414,32 @@ export async function loadWorkspace(uid: string): Promise<LoadedWorkspace> {
   }
 
   const remoteIsEmpty = !remoteRegistry && remoteChecklists.size === 0;
-  const localBootstrap = remoteIsEmpty ? null : localWorkspaceFromBrowser();
+  /*
+   * Il bootstrap dal browser serve solo come riparazione quando il registry
+   * remoto manca: se il cloud ne ha uno, non va mai fabbricato un registry
+   * locale di default che potrebbe vincerci sopra.
+   */
+  const localBootstrap =
+    !remoteRegistry && !remoteIsEmpty ? localWorkspaceFromBrowser() : null;
   const localRegistryDoc: WorkspaceRegistryDoc | null = localBootstrap
     ? {
         ...localBootstrap.registry,
-        updatedAt: nowIso(),
+        // Nessun timestamp persistito: i dati locali non datati perdono col cloud.
+        updatedAt: "",
       }
     : null;
 
-  const mergedRegistry = pickRegistry(remoteRegistry, cachedRegistry ?? localRegistryDoc);
+  let mergedRegistry = pickRegistry(
+    remoteRegistry,
+    cachedRegistry ?? localRegistryDoc,
+  );
+  if (mergedRegistry) {
+    mergedRegistry = attachMissingRemoteStations(
+      mergedRegistry,
+      remoteRegistry,
+      remoteChecklists,
+    );
+  }
 
   if (!mergedRegistry || mergedRegistry.stations.length === 0) {
     if (remoteIsEmpty && !cachedRegistry) {
@@ -377,21 +458,19 @@ export async function loadWorkspace(uid: string): Promise<LoadedWorkspace> {
     const cached = readCachedStationDoc(uid, station.id);
     const localSaved = remoteIsEmpty ? null : loadChecklistForStation(station.id);
     const localDoc: StationChecklistDoc | null = localSaved
-      ? { ...localSaved, updatedAt: nowIso() }
+      ? { ...localSaved, updatedAt: "" }
       : null;
 
-    checklistsByStationId[station.id] = pickChecklist(
-      remote,
-      cached ?? localDoc,
-      station.name,
-      uid,
-    );
+    const picked = pickChecklist(remote, cached ?? localDoc, station.name, uid);
+    checklistsByStationId[station.id] = picked.checklist;
+    // La cache conserva il timestamp del vincitore: leggere non "ringiovanisce" i dati.
+    writeCachedStationDoc(uid, station.id, {
+      ...picked.checklist,
+      updatedAt: picked.updatedAt,
+    });
   }
 
   writeCachedRegistry(uid, mergedRegistry);
-  for (const [stationId, checklist] of Object.entries(checklistsByStationId)) {
-    writeCachedStationDoc(uid, stationId, toStationDoc(checklist));
-  }
 
   if (!remoteRegistry && localBootstrap && !remoteIsEmpty) {
     await pushWorkspaceToCloud(uid, {
@@ -436,9 +515,11 @@ export async function saveRegistryToCloud(
   registry: StationsRegistry,
 ): Promise<void> {
   const docData = toRegistryDoc(registry);
+  // Cache prima del push: se il salvataggio cloud fallisce (offline), lo stato
+  // locale più recente resta autorevole al prossimo merge.
+  writeCachedRegistry(uid, docData);
   await ensureFirestoreOnline();
   await setDoc(registryDocRef(uid), docData, { merge: true });
-  writeCachedRegistry(uid, docData);
 }
 
 export async function saveStationChecklistToCloud(
@@ -447,9 +528,9 @@ export async function saveStationChecklistToCloud(
   checklist: ChecklistPersisted,
 ): Promise<void> {
   const docData = toStationDoc(checklist);
+  writeCachedStationDoc(uid, stationId, docData);
   await ensureFirestoreOnline();
   await setDoc(stationDocRef(uid, stationId), docData, { merge: true });
-  writeCachedStationDoc(uid, stationId, docData);
 }
 
 export async function deleteStationFromCloud(
