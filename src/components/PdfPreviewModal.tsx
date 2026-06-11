@@ -127,7 +127,7 @@ export function PdfPreviewModal({
           <div className="pdf-preview-fallback">
             <p className="pdf-preview-fallback-text">
               Tocca Scarica PDF: il report viene salvato sul dispositivo con il
-              nome corretto. Non usare Stampa del browser.
+              nome corretto.
             </p>
             <div className="pdf-preview-fallback-actions">
               <button
