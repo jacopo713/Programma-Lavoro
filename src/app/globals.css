@@ -160,8 +160,8 @@ body {
   background: var(--brand-light);
 }
 
-.auth-btn--icon {
-  padding: 0.4rem;
+.auth-btn--logout {
+  padding: 0.4rem 0.65rem;
 }
 
 .auth-btn:focus-visible,
@@ -1442,8 +1442,7 @@ body {
     font-size: 0.75rem;
   }
 
-  .app-sidebar-account .auth-btn--icon {
-    min-width: 44px;
+  .app-sidebar-account .auth-btn--logout {
     min-height: 44px;
   }
 

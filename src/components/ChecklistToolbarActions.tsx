@@ -128,13 +128,15 @@ export function ChecklistToolbarActions() {
             type="button"
             className={`btn-export${exportLoading ? " loading" : ""}`}
             id="btnExport"
-            aria-label="Anteprima ed esporta checklist in PDF"
+            aria-label="Genera e scarica la checklist in PDF"
             disabled={!hasReportContent || exportLoading}
             onClick={handleExport}
           >
             <FileText size={16} className="export-icon" aria-hidden />
             <Loader2 size={16} className="spinner animate-spin" aria-hidden />
-            <span className="btn-label">Anteprima PDF</span>
+            <span className="btn-label">
+              {isMobile ? "Scarica PDF da qui" : "Anteprima PDF"}
+            </span>
           </button>
           <StationSelectControl
             className="checklist-toolbar-station"

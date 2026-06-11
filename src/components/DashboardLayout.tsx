@@ -21,8 +21,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <div className="print-guard" role="note" aria-hidden="true">
           <h1>Questa pagina non è il report PDF</h1>
           <p>
-            Per esportare la checklist usa il pulsante Anteprima PDF, poi
-            Scarica PDF dal pannello che si apre.
+            Per esportare la checklist usa il pulsante Scarica PDF da qui (su
+            computer: Anteprima PDF), poi Scarica PDF dal pannello che si apre.
           </p>
           <p>Non usare Stampa o Salva come PDF del browser su questa pagina.</p>
         </div>

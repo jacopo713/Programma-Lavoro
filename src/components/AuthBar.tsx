@@ -50,8 +50,7 @@ export function AuthBar() {
             </Link>
             <button
               type="button"
-              className="auth-btn auth-btn--ghost auth-btn--icon"
-              aria-label="Esci"
+              className="auth-btn auth-btn--ghost auth-btn--logout"
               disabled={signingOut}
               onClick={handleSignOut}
             >
@@ -60,6 +59,7 @@ export function AuthBar() {
               ) : (
                 <LogOut size={16} aria-hidden />
               )}
+              <span>Esci</span>
             </button>
           </div>
         ) : (
