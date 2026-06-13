@@ -1,7 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ── Limite utenti (max 20) ────────────────────────────────────────────
+    // ── Limite utenti (max 30) ────────────────────────────────────────────
     // Richiede un documento contatore creato UNA volta dall'amministratore:
     //   /meta/members  →  { count: 0 }
     // Ogni nuovo utente "occupa un posto" creando /members/{uid} e
@@ -18,7 +18,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['count'])
         && request.resource.data.count is number
         && request.resource.data.count >= 0
-        && request.resource.data.count <= 20
+        && request.resource.data.count <= 30
         && (
           // Incremento: solo contestualmente alla creazione del proprio posto
           (request.resource.data.count == resource.data.count + 1
@@ -44,7 +44,7 @@ service cloud.firestore {
         && request.resource.data.joinedAt is string
         && getAfter(/databases/$(database)/documents/meta/members).data.count
             == get(/databases/$(database)/documents/meta/members).data.count + 1
-        && getAfter(/databases/$(database)/documents/meta/members).data.count <= 20;
+        && getAfter(/databases/$(database)/documents/meta/members).data.count <= 30;
 
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
