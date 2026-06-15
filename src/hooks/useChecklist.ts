@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  canSavePhotoEntry,
   hasValidPhoto,
   isDataUrlPhoto,
   isRemotePhoto,
@@ -840,7 +839,7 @@ export function useChecklist(
       photo: string,
       severity: SeverityLevel,
     ): Promise<boolean> => {
-      if (!canSavePhotoEntry(title, photo)) return false;
+      if (!hasValidPhoto(photo)) return false;
 
       const index = items.findIndex((item) => item.id === id);
       if (index === -1) return false;

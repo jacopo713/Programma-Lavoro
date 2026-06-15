@@ -18,6 +18,12 @@ export function canSavePhotoEntry(
   return title.trim().length > 0 && list.length > 0;
 }
 
+export function canUpdatePhotoEntry(
+  photo: string | null | undefined,
+): boolean {
+  return hasValidPhoto(photo);
+}
+
 /** URL remoto o data URL — valido come src per img */
 export function getPhotoDataUrl(photos: string[]): string | null {
   return photos[0] ?? null;

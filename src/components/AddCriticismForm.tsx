@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppToast } from "@/contexts/ToastContext";
 import { useImageFileInput } from "@/hooks/useImageFileInput";
 import { PhotoSourceChooser } from "./PhotoSourceChooser";
-import { canSavePhotoEntry } from "@/lib/criticismDisplay";
+import { canSavePhotoEntry, canUpdatePhotoEntry } from "@/lib/criticismDisplay";
 import { MAX_TITLE_LENGTH } from "@/lib/constants";
 import type { SeverityLevel } from "@/lib/types";
 import { DEFAULT_SEVERITY, SeveritySelect } from "./SeveritySelect";
@@ -80,8 +80,12 @@ export function AddCriticismForm({
     onCancel();
   };
 
+  const canSave = isEdit
+    ? canUpdatePhotoEntry(photo)
+    : canSavePhotoEntry(title, photo);
+
   const handleSave = () => {
-    if (!canSavePhotoEntry(title, photo) || saving) return;
+    if (!canSave || saving) return;
     onSave(title.trim(), photo!, severity);
   };
 
@@ -228,7 +232,7 @@ export function AddCriticismForm({
           <button
             type="button"
             className="btn-save"
-            disabled={!canSavePhotoEntry(title, photo) || saving || authRequired}
+            disabled={!canSave || saving || authRequired}
             onClick={handleSave}
           >
             {saving ? (
