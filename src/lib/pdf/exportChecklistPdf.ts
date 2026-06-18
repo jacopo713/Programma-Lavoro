@@ -1,6 +1,5 @@
 import { jsPDF } from "jspdf";
 import { isDataUrlPhoto } from "@/lib/criticismDisplay";
-import { APP_NAME } from "@/lib/constants";
 import {
   INSPECTION_SECTIONS,
   type InspectionSectionDef,
@@ -1002,11 +1001,6 @@ function stampFooters(doc: jsPDF, pageW: number, mL: number, mR: number) {
     doc.setFontSize(T.footer);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...PDF_THEME.textMuted);
-    doc.text(
-      `${APP_NAME} — Documento generato automaticamente`,
-      mL,
-      L.footerTextMm,
-    );
     const pgTxt = `Pagina ${i} / ${n}`;
     doc.text(
       pgTxt,
