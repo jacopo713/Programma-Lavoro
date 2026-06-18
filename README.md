@@ -34,7 +34,7 @@ Al primo login con dati solo in locale, i dati vengono migrati automaticamente a
 
 Variabili ambiente richieste in `.env.local`: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, e le altre chiavi del progetto Firebase.
 
-Opzionale: `NEXT_PUBLIC_LEGAL_CONTACT_EMAIL` — email mostrata nell'informativa privacy per richieste GDPR.
+`NEXT_PUBLIC_LEGAL_CONTACT_EMAIL` — email del titolare per richieste privacy/GDPR (in produzione è configurata in `apphosting.yaml`; in locale impostala anche in `.env.local`, es. `gymlionshop@gmail.com`).
 
 Termini d'uso e informativa privacy: `/termini` e `/privacy`.
 
