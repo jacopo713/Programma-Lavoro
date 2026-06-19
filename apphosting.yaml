@@ -25,7 +25,7 @@ env:
       - BUILD
       - RUNTIME
   - variable: NEXT_PUBLIC_LEGAL_CONTACT_EMAIL
-    value: gymlionshop@gmail.com
+    value: jacopopalumbo365@gmail.com
     availability:
       - BUILD
       - RUNTIME
