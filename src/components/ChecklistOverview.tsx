@@ -18,6 +18,10 @@ export function ChecklistOverview() {
     () => getChecklistVisibleItems(items, focusSessionId),
     [items, focusSessionId],
   );
+  const openCount = useMemo(
+    () => items.filter((item) => !item.resolved).length,
+    [items],
+  );
 
   if (!hydrated) return null;
 
@@ -25,7 +29,7 @@ export function ChecklistOverview() {
   const openLabel = inFocus ? "In focus" : "Aperte";
   const openTitle = inFocus
     ? `${visibleItems.length} criticità visualizzate nel contesto completo`
-    : `${visibleItems.length} criticità aperte`;
+    : `${openCount} criticità aperte`;
 
   return (
     <ul className="checklist-stats" aria-label="Riepilogo checklist">
@@ -37,7 +41,7 @@ export function ChecklistOverview() {
       </li>
       <li className="checklist-stat" title={openTitle}>
         <span className="checklist-stat-value">
-          <strong>{visibleItems.length}</strong>
+          <strong>{inFocus ? visibleItems.length : openCount}</strong>
         </span>
         <span className="checklist-stat-label">{openLabel}</span>
       </li>

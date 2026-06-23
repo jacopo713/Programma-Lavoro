@@ -2427,6 +2427,11 @@ main {
   color: #ffffff;
 }
 
+.severity--resolved {
+  background: var(--success-light);
+  color: var(--success);
+}
+
 .severity-banner {
   display: inline-flex;
   align-items: center;
@@ -2482,6 +2487,16 @@ main {
 
 .severity-banner.severity--grave .severity-banner-dot {
   background: var(--sev-grave-dot);
+}
+
+.severity-banner.severity--resolved {
+  background: var(--success-light);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.severity-banner.severity--resolved .severity-banner-dot {
+  background: var(--success);
 }
 
 .severity-picker {
@@ -2742,12 +2757,7 @@ main {
 }
 
 .crit-card--resolved {
-  opacity: 0.88;
-}
-
-.crit-card--resolved .crit-card-photo-title {
-  text-decoration: line-through;
-  color: var(--text-muted);
+  opacity: 0.92;
 }
 
 .btn-icon:focus-visible {
@@ -3124,6 +3134,10 @@ main {
   border-left-color: var(--sev-grave-border);
 }
 
+.severity-select-wrap[data-severity="resolved"] .severity-select {
+  border-left-color: var(--success);
+}
+
 .severity-select-field {
   position: relative;
   display: flex;
@@ -3131,43 +3145,34 @@ main {
   gap: 0.5rem;
 }
 
-.severity-select-dot {
+.severity-select-num {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  min-width: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   font-weight: 700;
+  line-height: 1;
+  background: none;
+  border: none;
+  padding: 0;
 }
 
-.severity-select-dot.severity--monitor {
-  background: var(--sev-monitor);
-  color: var(--sev-monitor-text);
+.severity-select-num--monitor {
+  color: var(--sev-monitor-dot);
 }
 
-.severity-select-dot.severity--moderate {
-  background: var(--sev-moderate);
-  color: #fff;
+.severity-select-num--moderate {
+  color: var(--sev-moderate-dot);
 }
 
-.severity-select-dot.severity--grave {
-  background: var(--sev-grave);
-  color: #fff;
+.severity-select-num--grave {
+  color: var(--sev-grave-dot);
 }
 
-.severity-select-wrap[data-severity="1"] .severity-select-dot::before {
-  content: "1";
-}
-
-.severity-select-wrap[data-severity="2"] .severity-select-dot::before {
-  content: "2";
-}
-
-.severity-select-wrap[data-severity="3"] .severity-select-dot::before {
-  content: "3";
+.severity-select-num--resolved {
+  color: var(--success);
 }
 
 .severity-select {

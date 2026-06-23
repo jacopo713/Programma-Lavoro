@@ -11,7 +11,7 @@ import {
 import { getPhotoDataUrl } from "@/lib/criticismDisplay";
 import { getCriticismDomId } from "@/lib/criticismNavigation";
 import type { Criticism } from "@/lib/types";
-import { SeverityLabelBanner } from "./SeverityLabelBanner";
+import { CriticismStatusBanner } from "./SeverityLabelBanner";
 
 interface CriticismCardProps {
   item: Criticism;
@@ -125,7 +125,7 @@ export function CriticismCard({
             </button>
           </div>
         ) : null}
-        <SeverityLabelBanner level={item.severity} />
+        <CriticismStatusBanner item={item} />
       </div>
     </div>
   );

@@ -11,6 +11,14 @@ import {
 } from "@/lib/sectionDescriptions";
 import { isSectionIncludedInReport } from "@/lib/sectionReport";
 import {
+  RESOLVED_BANNER_BORDER_RGB,
+  RESOLVED_BANNER_DOT_RGB,
+  RESOLVED_BANNER_FILL_RGB,
+  RESOLVED_BANNER_TEXT_RGB,
+  RESOLVED_REPORT_LABEL,
+  RESOLVED_STATUS_LABEL,
+} from "@/lib/criticismStatus";
+import {
   getSeverityBannerLabel,
   getSeverityReportBannerLabel,
   normalizeSeverity,
@@ -251,23 +259,30 @@ function drawPdfHeader(
 interface SummaryStats {
   total: number;
   photos: number;
+  resolved: number;
   bySeverity: Record<SeverityLevel, number>;
 }
 
 function computeSummaryStats(items: Criticism[]): SummaryStats {
   const bySeverity: Record<SeverityLevel, number> = { 1: 0, 2: 0, 3: 0 };
   let photos = 0;
+  let resolved = 0;
   for (const item of items) {
-    bySeverity[normalizeSeverity(item.severity)] += 1;
+    if (item.resolved) {
+      resolved += 1;
+    } else {
+      bySeverity[normalizeSeverity(item.severity)] += 1;
+    }
     photos += item.photos.length;
   }
-  return { total: items.length, photos, bySeverity };
+  return { total: items.length, photos, resolved, bySeverity };
 }
 
 /** Altezza blocco pillole con eventuale a capo */
 function measurePillBlockHeight(
   doc: jsPDF,
   bySeverity: Record<SeverityLevel, number>,
+  resolvedCount: number,
   startX: number,
   maxX: number,
   onlyNonZero: boolean,
@@ -285,6 +300,14 @@ function measurePillBlockHeight(
     }
     pillX += pillW + 3;
   });
+  if (!onlyNonZero || resolvedCount > 0) {
+    const resolvedLabel = `${RESOLVED_STATUS_LABEL} (${resolvedCount})`;
+    const pillW = measureBannerWidth(doc, resolvedLabel);
+    if (rowCount === 0 || pillX + pillW > maxX) {
+      if (rowCount > 0) pillX = startX;
+      rowCount += 1;
+    }
+  }
   if (rowCount === 0) return 0;
   return rowCount * BANNER_H + (rowCount - 1) * 3;
 }
@@ -299,7 +322,14 @@ function computeGlobalSummaryBoxHeight(
   const pillMaxX = mL + uW - innerPad;
   let h = innerPad + L.gapLg + L.gapLg + L.gapMd;
   h +=
-    measurePillBlockHeight(doc, stats.bySeverity, mL + innerPad, pillMaxX, false) +
+    measurePillBlockHeight(
+      doc,
+      stats.bySeverity,
+      stats.resolved,
+      mL + innerPad,
+      pillMaxX,
+      false,
+    ) +
     4;
   if (stats.total > 0) {
     h += 4 + L.lineBody;
@@ -513,6 +543,7 @@ function drawSectionChapter(
 function drawSeverityPills(
   doc: jsPDF,
   bySeverity: Record<SeverityLevel, number>,
+  resolvedCount: number,
   startX: number,
   maxX: number,
   startY: number,
@@ -532,6 +563,15 @@ function drawSeverityPills(
     drawSeverityBannerPdf(doc, opt.level, pillX, pillRowY, label);
     pillX += pillW + 3;
   });
+  if (!onlyNonZero || resolvedCount > 0) {
+    const resolvedLabel = `${RESOLVED_STATUS_LABEL} (${resolvedCount})`;
+    const pillW = measureBannerWidth(doc, resolvedLabel);
+    if (pillX + pillW > maxX && pillX > startX) {
+      pillX = startX;
+      pillRowY += BANNER_H + 3;
+    }
+    drawResolvedBannerPdf(doc, pillX, pillRowY, resolvedLabel);
+  }
   return pillRowY + BANNER_H;
 }
 
@@ -586,6 +626,7 @@ function drawExecutiveSummary(
   innerY = drawSeverityPills(
     doc,
     stats.bySeverity,
+    stats.resolved,
     pillStartX,
     pillMaxX,
     innerY,
@@ -789,13 +830,17 @@ function drawPhotoEntryCell(
   }
 
   const bannerY = y + cardH - PHOTO_ENTRY_CARD_PAD - BANNER_H;
-  drawSeverityBannerPdf(
-    doc,
-    severity,
-    innerX,
-    bannerY,
-    getSeverityReportBannerLabel(severity),
-  );
+  if (item.resolved) {
+    drawResolvedBannerPdf(doc, innerX, bannerY, RESOLVED_REPORT_LABEL);
+  } else {
+    drawSeverityBannerPdf(
+      doc,
+      severity,
+      innerX,
+      bannerY,
+      getSeverityReportBannerLabel(severity),
+    );
+  }
 }
 
 /** Salta pagina se la riga non entra nello spazio verticale residuo (foto sempre a dimensione piena) */
@@ -923,6 +968,20 @@ function drawSeverityBannerPdf(
     border: SEVERITY_BANNER_BORDER_RGB[severity],
     dot: SEVERITY_BANNER_DOT_RGB[severity],
     text: SEVERITY_BANNER_TEXT_RGB[severity],
+  });
+}
+
+function drawResolvedBannerPdf(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  label: string,
+): number {
+  return drawColoredBannerPdf(doc, label, x, y, {
+    fill: RESOLVED_BANNER_FILL_RGB,
+    border: RESOLVED_BANNER_BORDER_RGB,
+    dot: RESOLVED_BANNER_DOT_RGB,
+    text: RESOLVED_BANNER_TEXT_RGB,
   });
 }
 

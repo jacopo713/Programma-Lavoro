@@ -7,6 +7,10 @@ import { useImageFileInput } from "@/hooks/useImageFileInput";
 import { PhotoSourceChooser } from "./PhotoSourceChooser";
 import { canSavePhotoEntry, canUpdatePhotoEntry } from "@/lib/criticismDisplay";
 import { MAX_TITLE_LENGTH } from "@/lib/constants";
+import {
+  getFormStatus,
+  type CriticismFormStatus,
+} from "@/lib/criticismStatus";
 import type { SeverityLevel } from "@/lib/types";
 import { DEFAULT_SEVERITY, SeveritySelect } from "./SeveritySelect";
 
@@ -14,6 +18,7 @@ export interface CriticismFormInitial {
   title: string;
   photo: string;
   severity: SeverityLevel;
+  resolved: boolean;
 }
 
 export type PhotoEntryFormLayout = "panel" | "inline";
@@ -25,7 +30,7 @@ interface AddCriticismFormProps {
   editingId?: number;
   initial?: CriticismFormInitial;
   onCancel: () => void;
-  onSave: (title: string, photo: string, severity: SeverityLevel) => void;
+  onSave: (title: string, photo: string, status: CriticismFormStatus) => void;
   authRequired?: boolean;
   saving?: boolean;
 }
@@ -46,7 +51,7 @@ export function AddCriticismForm({
   const { showToast } = useAppToast();
   const [title, setTitle] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
-  const [severity, setSeverity] = useState<SeverityLevel>(DEFAULT_SEVERITY);
+  const [formStatus, setFormStatus] = useState<CriticismFormStatus>(DEFAULT_SEVERITY);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   const formId = isInline && editingId != null
@@ -62,14 +67,14 @@ export function AddCriticismForm({
   const resetForm = useCallback(() => {
     setTitle("");
     setPhoto(null);
-    setSeverity(DEFAULT_SEVERITY);
+    setFormStatus(DEFAULT_SEVERITY);
   }, []);
 
   const loadInitial = useCallback(() => {
     if (initial) {
       setTitle(initial.title);
       setPhoto(initial.photo);
-      setSeverity(initial.severity);
+      setFormStatus(getFormStatus(initial));
     } else {
       resetForm();
     }
@@ -86,7 +91,7 @@ export function AddCriticismForm({
 
   const handleSave = () => {
     if (!canSave || saving) return;
-    onSave(title.trim(), photo!, severity);
+    onSave(title.trim(), photo!, formStatus);
   };
 
   const handlePhotoReady = useCallback((dataUrl: string) => {
@@ -217,8 +222,8 @@ export function AddCriticismForm({
 
         <SeveritySelect
           id={severityFieldId}
-          value={severity}
-          onChange={setSeverity}
+          value={formStatus}
+          onChange={setFormStatus}
         />
 
         {authRequired ? (

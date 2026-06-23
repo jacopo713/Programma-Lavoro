@@ -14,9 +14,9 @@ import {
   INSPECTION_SECTIONS,
   type SectionId,
 } from "@/lib/inspectionSections";
+import { applyFormStatus, type CriticismFormStatus } from "@/lib/criticismStatus";
 import { getPhotoDataUrl } from "@/lib/criticismDisplay";
 import { DEFAULT_SEVERITY } from "@/lib/severity";
-import type { SeverityLevel } from "@/lib/types";
 import { useAppToast } from "@/contexts/ToastContext";
 import type { CriticismFormInitial } from "./AddCriticismForm";
 import { Footer } from "./Footer";
@@ -87,6 +87,7 @@ export function ChecklistPage() {
       title: item.title,
       photo,
       severity: item.severity,
+      resolved: item.resolved,
     };
   }, [editingId, items, visibleItems]);
 
@@ -169,7 +170,7 @@ export function ChecklistPage() {
   const handleSave = async (
     title: string,
     photo: string,
-    severity: SeverityLevel,
+    status: CriticismFormStatus,
   ) => {
     if (!canManagePhotos) {
       showToast("Accedi per allegare foto", "warning");
@@ -177,9 +178,21 @@ export function ChecklistPage() {
     }
     if (savingPhoto || editingId === null) return;
 
+    const existing =
+      items.find((i) => i.id === editingId) ??
+      visibleItems.find((i) => i.id === editingId);
+    const currentSeverity = existing?.severity ?? DEFAULT_SEVERITY;
+    const { severity, resolved } = applyFormStatus(currentSeverity, status);
+
     setSavingPhoto(true);
     try {
-      const ok = await updateCriticism(editingId, title, photo, severity);
+      const ok = await updateCriticism(
+        editingId,
+        title,
+        photo,
+        severity,
+        resolved,
+      );
       if (ok) {
         closeForm();
         showToast("Foto aggiornata", "success");

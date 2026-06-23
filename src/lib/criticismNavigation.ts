@@ -6,7 +6,6 @@ import {
   INSPECTION_SECTIONS,
   type InspectionSectionDef,
 } from "./inspectionSections";
-import { getSeverityLabel } from "./severity";
 import type { Criticism } from "./types";
 
 export const CRITICISM_INDEX_PATH = "/criticita";
@@ -192,7 +191,7 @@ export function getChecklistVisibleItems(
   focusId: number | null,
 ): Criticism[] {
   if (focusId !== null) return items;
-  return items.filter((item) => !item.resolved);
+  return items;
 }
 
 export function getCriticismIndexTitle(filter: CriticismNavFilter): string {
@@ -230,11 +229,4 @@ export function groupCriticismsBySection(
   })).filter((group) => group.items.length > 0);
 }
 
-export function getCriticismIndexMeta(
-  item: Criticism,
-): { label: string; tone: "resolved" | "severity" } {
-  if (item.resolved) {
-    return { label: "Risolto", tone: "resolved" };
-  }
-  return { label: getSeverityLabel(item.severity), tone: "severity" };
-}
+export { getCriticismIndexMeta } from "./criticismStatus";

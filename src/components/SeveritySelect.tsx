@@ -1,16 +1,25 @@
 "use client";
 
 import {
+  RESOLVED_STATUS_LABEL,
+  type CriticismFormStatus,
+} from "@/lib/criticismStatus";
+import {
   DEFAULT_SEVERITY,
-  getSeverityClass,
   SEVERITY_OPTIONS,
 } from "@/lib/severity";
-import type { SeverityLevel } from "@/lib/types";
+
+function getSelectNumClass(status: CriticismFormStatus): string {
+  if (status === "resolved") return "severity-select-num severity-select-num--resolved";
+  if (status === 1) return "severity-select-num severity-select-num--monitor";
+  if (status === 3) return "severity-select-num severity-select-num--grave";
+  return "severity-select-num severity-select-num--moderate";
+}
 
 interface SeveritySelectProps {
   id?: string;
-  value: SeverityLevel;
-  onChange: (level: SeverityLevel) => void;
+  value: CriticismFormStatus;
+  onChange: (status: CriticismFormStatus) => void;
 }
 
 export function SeveritySelect({
@@ -24,16 +33,23 @@ export function SeveritySelect({
         Livello criticità
       </label>
       <div className="severity-select-field">
-        <span
-          className={`severity-select-dot ${getSeverityClass(value)}`}
-          aria-hidden
-        />
+        <span className={getSelectNumClass(value)} aria-hidden>
+          {value === "resolved" ? "0" : value}
+        </span>
         <select
           id={id}
           className="severity-select"
           value={value}
-          onChange={(e) => onChange(Number(e.target.value) as SeverityLevel)}
+          onChange={(e) => {
+            const raw = e.target.value;
+            onChange(
+              raw === "resolved"
+                ? "resolved"
+                : (Number(raw) as CriticismFormStatus),
+            );
+          }}
         >
+          <option value="resolved">0. {RESOLVED_STATUS_LABEL}</option>
           {SEVERITY_OPTIONS.map((opt) => (
             <option key={opt.level} value={opt.level}>
               {opt.level}. {opt.label}

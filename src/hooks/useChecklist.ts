@@ -838,6 +838,7 @@ export function useChecklist(
       title: string,
       photo: string,
       severity: SeverityLevel,
+      resolved: boolean,
     ): Promise<boolean> => {
       if (!hasValidPhoto(photo)) return false;
 
@@ -867,6 +868,7 @@ export function useChecklist(
         title: title.trim(),
         photos: [remotePhoto],
         severity,
+        resolved,
       };
 
       const nextItems = [...items];

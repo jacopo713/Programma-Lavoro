@@ -1,6 +1,7 @@
 "use client";
 
-import type { Criticism, SeverityLevel } from "@/lib/types";
+import type { CriticismFormStatus } from "@/lib/criticismStatus";
+import type { Criticism } from "@/lib/types";
 import { AddCriticismForm, type CriticismFormInitial } from "./AddCriticismForm";
 import { CriticismCard } from "./CriticismCard";
 
@@ -16,7 +17,7 @@ interface CriticismListProps {
   onPhotoClick: (src: string) => void;
   onMove?: (id: number, direction: -1 | 1) => void;
   onFormCancel: () => void;
-  onFormSave: (title: string, photo: string, severity: SeverityLevel) => void;
+  onFormSave: (title: string, photo: string, status: CriticismFormStatus) => void;
   canReorder?: boolean;
   authRequired?: boolean;
   saving?: boolean;

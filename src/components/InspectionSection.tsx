@@ -5,8 +5,9 @@ import { useRef } from "react";
 import { useAppToast } from "@/contexts/ToastContext";
 import { useImageFileInput } from "@/hooks/useImageFileInput";
 import { MAX_PHOTOS_PER_UPLOAD } from "@/lib/constants";
+import type { CriticismFormStatus } from "@/lib/criticismStatus";
 import type { InspectionSectionDef } from "@/lib/inspectionSections";
-import type { Criticism, SeverityLevel } from "@/lib/types";
+import type { Criticism } from "@/lib/types";
 import type { CriticismFormInitial } from "./AddCriticismForm";
 import { CriticismList } from "./CriticismList";
 import { PhotoSourceChooser } from "./PhotoSourceChooser";
@@ -29,7 +30,7 @@ interface InspectionSectionProps {
   onPhotoClick: (src: string) => void;
   onMove?: (id: number, direction: -1 | 1) => void;
   onFormCancel: () => void;
-  onFormSave: (title: string, photo: string, severity: SeverityLevel) => void;
+  onFormSave: (title: string, photo: string, status: CriticismFormStatus) => void;
   canManagePhotos?: boolean;
   savingPhoto?: boolean;
 }
